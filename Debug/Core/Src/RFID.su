@@ -1,0 +1,7 @@
+../Core/Src/RFID.c:8:13:CR95HF_Deselect	0	static
+../Core/Src/RFID.c:13:6:CR95HF_Init	0	static
+../Core/Src/RFID.c:19:9:CR95HF_SendCommand	80	static
+../Core/Src/RFID.c:51:9:CR95HF_ReadID	24	static
+../Core/Src/RFID.c:57:9:CR95HF_SelectProtocol	40	static
+../Core/Src/RFID.c:65:9:CR95HF_PollField	32	static
+../Core/Src/RFID.c:72:9:CR95HF_SendRecv	16	static

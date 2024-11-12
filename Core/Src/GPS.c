@@ -28,17 +28,11 @@ int daychange = 0;
 
 int getRMC_time = 0;
 
-void getGPS(){
-	
-}
-
 void copy_array(uint8_t *des, uint8_t *src, int size){
 	for(size_t i = 0 ;i <  size; i++){
 		des[i] = src[i];
 	}
 }
-
-
 
 void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
 {
@@ -168,7 +162,6 @@ void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
 
 void getRMC(){
 	int idx = 0;
-	//uint8_t temp[128];
 	getRMC_time++;
 	int length = 0;
 	for(size_t i = 0; i < GPS_STACK_SIZE; i++){
@@ -190,11 +183,12 @@ void getRMC(){
 		rmc_str[i] = 0;
 	}
 	if(isRMCExist == 1){
-		parse_rmc(rmc_str);
-		display_rmc_data(&huart1);
+		//parse_rmc(rmc_str);
+		//display_rmc_data(&huart1);
 		if(rmc.isValid == 1){
 			sendRMCDataToFlash(&rmc);
 			//sendRMCDataToGSM(&rmc);
+			getRMC_time = 0;
 		}
 		isRMCExist = 0;
 	}
@@ -205,7 +199,7 @@ void getRMC(){
 		getRMC_time = 0;
 	}
 	char output_elapsed[128];
-	snprintf(output_elapsed, 128, "Elapsed Time: %d\n", getRMC_time);
+	snprintf(output_elapsed, 128, "Elapsed Time blabla: %d\n", getRMC_time);
 	uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
 	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
 	
@@ -216,19 +210,19 @@ void StartGPS(void const * argument)
 	/* USER CODE BEGIN StartGPS */
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	/* Infinite loop */
-//	rmc.tim.hour = 10;
-//	rmc.tim.min = 12;
-//	rmc.tim.sec = 0;
-//	rmc.lcation.latitude = 20.998022;
-//	rmc.lcation.longitude = 105.794756;
-//	rmc.speed = 22.4;
-//	rmc.course = 30.5;
-//	rmc.lcation.NS = 'N';
-//	rmc.lcation.EW = 'E';
-//	rmc.isValid = 1;
-//	rmc.date.Day = 9;
-//	rmc.date.Mon = 11;
-//	rmc.date.Yr = 2024;
+	rmc.tim.hour = 10;
+	rmc.tim.min = 12;
+	rmc.tim.sec = 0;
+	rmc.lcation.latitude = 20.998022;
+	rmc.lcation.longitude = 105.794756;
+	rmc.speed = 22.4;
+	rmc.course = 30.5;
+	rmc.lcation.NS = 'N';
+	rmc.lcation.EW = 'E';
+	rmc.isValid = 1;
+	rmc.date.Day = 9;
+	rmc.date.Mon = 11;
+	rmc.date.Yr = 2024;
 	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 	int countSent = 0;

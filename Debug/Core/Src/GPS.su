@@ -1,9 +1,8 @@
-../Core/Src/GPS.c:31:6:getGPS	0	static
-../Core/Src/GPS.c:35:6:copy_array	8	static
-../Core/Src/GPS.c:43:6:GPSUART_ReInitializeRxDMA	8	static
-../Core/Src/GPS.c:56:6:display_rmc_data	88	static
-../Core/Src/GPS.c:81:8:convertToEpoch	48	static
-../Core/Src/GPS.c:99:6:parse_rmc	48	static
-../Core/Src/GPS.c:159:6:sendRMCDataToFlash	16	static
-../Core/Src/GPS.c:169:6:getRMC	144	static
-../Core/Src/GPS.c:213:6:StartGPS	32	static
+../Core/Src/GPS.c:31:6:copy_array	8	static
+../Core/Src/GPS.c:37:6:GPSUART_ReInitializeRxDMA	8	static
+../Core/Src/GPS.c:50:6:display_rmc_data	88	static
+../Core/Src/GPS.c:75:8:convertToEpoch	48	static
+../Core/Src/GPS.c:93:6:parse_rmc	48	static
+../Core/Src/GPS.c:153:6:sendRMCDataToFlash	16	static
+../Core/Src/GPS.c:163:6:getRMC	144	static
+../Core/Src/GPS.c:207:6:StartGPS	32	static

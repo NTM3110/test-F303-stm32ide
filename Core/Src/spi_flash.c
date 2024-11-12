@@ -77,11 +77,10 @@ void W25_Reset(){
 int W25_ReadJedecID() {
 	int retval;
 	uint8_t idcmd = W25_CMD_READ_JEDEC_ID;
-	// idcmd[0] = W25_CMD_READ_JEDEC_ID;
 	uint8_t jdec_id[4];
 	char result[11];
 	W25_CS_ENABLE(); // Drive Winbond chip select, /CS low
-	HAL_SPI_TransmitReceive(&hspi1, &idcmd, jdec_id, 4, 4000);
+	retval = HAL_SPI_TransmitReceive(&hspi1, &idcmd, jdec_id, 4, 4000);
 	W25_CS_DISABLE();
 	char spi_flash_intro[] = "Flash ID received: ";
 	HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_intro, strlen(spi_flash_intro), 1000);
@@ -89,7 +88,6 @@ int W25_ReadJedecID() {
 	sprintf(result, "%02X, %02X, %02X", jdec_id[1], jdec_id[2], jdec_id[3]);
 	HAL_UART_Transmit(&huart1, (uint8_t*) result, 11, 1000);
 	HAL_UART_Transmit(&huart1, (uint8_t*)"\r", 1, 1000);
-	//printf("%s: retval %d, %02X, %02X, %02X\r\n",__func__, retval, buf[0],buf[1],buf[2]);
 	return retval;
 } // W25_ReadJEDECID()
 
@@ -272,8 +270,6 @@ void saveRMC(){
 		is_erased_rmc = 1;
 	}
 	
-	//format_rmc_data(&rmc_saved, (char*)rmcBufferDemo, 128);
-	
 	for(size_t i = 0; i < 128; i++){
 			if(rmcBufferDemo[i] != 0x00 && rmcBufferDemo[i+1] == 0x00){
 				k = i;
@@ -311,6 +307,7 @@ void saveRMC(){
 }
 
 void receiveRMCDataFromGPS(void) {
+	static int countRMCReceived = 0;
 	uint8_t output_buffer[70];
 
 	// Wait until there are at least 10 messages in the queue
@@ -320,17 +317,17 @@ void receiveRMCDataFromGPS(void) {
 		uart_transmit_string(&huart1, (uint8_t*)"Received  RMC Data SPI FLASH\n");
 		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
 		// Process received data (e.g., display, log, or store data)
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Time Received FLASH: %d:%d:%d\n", receivedData->tim.hour, receivedData->tim.min, receivedData->tim.sec);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FLASH : %d/%d/%d\n", receivedData->date.Day, receivedData->date.Mon, receivedData->date.Yr);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", receivedData->lcation.latitude, receivedData->lcation.NS, receivedData->lcation.longitude, receivedData->lcation.EW);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", receivedData->speed, receivedData->course, receivedData->isValid);
-		uart_transmit_string(&huart1, output_buffer);
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Time Received FLASH: %d:%d:%d\n", receivedData->tim.hour, receivedData->tim.min, receivedData->tim.sec);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FLASH : %d/%d/%d\n", receivedData->date.Day, receivedData->date.Mon, receivedData->date.Yr);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", receivedData->lcation.latitude, receivedData->lcation.NS, receivedData->lcation.longitude, receivedData->lcation.EW);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", receivedData->speed, receivedData->course, receivedData->isValid);
+//		uart_transmit_string(&huart1, output_buffer);
 
 
 		//Sending DATA to GSM
@@ -351,8 +348,12 @@ void receiveRMCDataFromGPS(void) {
 		uart_transmit_string(&huart1, output_buffer);
 
 		format_rmc_data(receivedData,(char*) rmcBufferDemo, 128);
-		saveRMC();
+		if(countRMCReceived == 5){
+			saveRMC();
+			countRMCReceived = 0;
+		}
 		osMailFree(RMC_MailQFLASHId, receivedData); // Free memory after use
+		countRMCReceived++;
 	}
 }
 
@@ -373,7 +374,6 @@ void StartSpiFlash(void const * argument)
 
 	osMailQDef(GSM_MailQ, 11, RMCSTRUCT);
 	RMC_MailQGSMId = osMailCreate(osMailQ(GSM_MailQ), NULL);
-	int countDelayGSM = 0;
 	for(;;){
 		osDelay(1000);
 		uart_transmit_string(&huart1, (uint8_t*) "INSIDE SPI FLASH\n");

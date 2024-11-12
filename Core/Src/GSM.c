@@ -178,20 +178,21 @@ void reboot_SIM_module(){
 	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);
 }
 
-
-int first_check_SIM(){
-		const char *substring = "READY";
-		int receive_OK = 0;
-		if(strstr((char *) response, substring) != NULL)
-		{
-			send_AT_command(FIRST_CHECK);
-			receive_response("First check SIM MODULE\n");
-			osDelay(100);
-			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			SIM_UART_ReInitializeRxDMA();
-			receive_OK = 1;
-		}
-		return receive_OK;
+//AT
+int first_check_SIM()
+{
+	const char *substring = "READY";
+	int receive_OK = 0;
+	if(strstr((char *) response, substring) != NULL)
+	{
+		send_AT_command(FIRST_CHECK);
+		receive_response("First check SIM MODULE\n");
+		osDelay(100);
+		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+		SIM_UART_ReInitializeRxDMA();
+		receive_OK = 1;
+	}
+	return receive_OK;
 }
 
 void set_time (uint8_t hr, uint8_t min, uint8_t sec)
@@ -356,7 +357,7 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 			end++;
 			digit_count++;
 		}
-		uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number -2:LEN ");
+		uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number-2: LEN ");
 		snprintf(output_buffer, 10, "%d", digit_count);
 		if (digit_count >= 12) {
 			const uint8_t *last_12 = end - 12;
@@ -367,7 +368,7 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 			}
 		}
 	}
-	uart_transmit_string(&huart1, (uint8_t *)" Check terminal Number - 0: ");
+	uart_transmit_string(&huart1, (uint8_t *)" Check terminal Number-0: ");
 	uart_transmit_string(&huart1, output);
 	uart_transmit_string(&huart1, (uint8_t *)" \n");
 }
@@ -406,7 +407,7 @@ int check_SIM_ready(){
 	SIM_UART_ReInitializeRxDMA();
 
 	//GET IMEI
-	send_AT_command("AT+CGSN=1\r\n");
+	send_AT_command(GET_IMEI);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
 		receive_response("Check IMEI-0\n");
 	}
@@ -414,13 +415,12 @@ int check_SIM_ready(){
 	uart_transmit_string(&huart1, (uint8_t *)" Check terminal Number: ");
 	uart_transmit_string(&huart1, terminal_phone_number);
 	uart_transmit_string(&huart1, (uint8_t *)" \n");
-
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 
 	//GET MODEL IDENTIFICATION
-	send_AT_command("AT+CGMM\r\n");
+	send_AT_command(GET_MODEL_IDENTI);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
 		receive_response("Check MODEL IDENTIFICATION\n");
 	}
@@ -429,7 +429,7 @@ int check_SIM_ready(){
 	SIM_UART_ReInitializeRxDMA();
 
 	// Configuring Network Registration Status (CS Service)
-	send_AT_command("AT+CREG=1\r\n");
+	send_AT_command(CONFIGURE_CS_SERVICE);
 	char *first_pointer = NULL;
 	char *second_pointer = NULL;
 	receive_response("Configuring Network Registration Status (CS Service)");
@@ -448,7 +448,7 @@ int check_SIM_ready(){
 	SIM_UART_ReInitializeRxDMA();
 
 	//Configuring Network Registration Status (PS Service)
-	send_AT_command("AT+CGREG=1\r\n");
+	send_AT_command(CONFIGURE_PS_SERVICE);
 	first_pointer = NULL;
 	second_pointer = NULL;
 	receive_response("Configuring Network Registration Status (PS Service)");
@@ -466,8 +466,8 @@ int check_SIM_ready(){
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 
-		//GET IMEI
-	send_AT_command("AT+CSQ\r\n");
+	//CHECK SIGNAL QUALITY
+	send_AT_command(CHECK_SIGNAL_QUALITY);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
 		receive_response("Check Signal Quality Report\n");
 	}
@@ -479,7 +479,7 @@ int check_SIM_ready(){
 }
 
 void check_configure_APN(){
-	send_AT_command("AT+QICSGP=1\r\n");
+	send_AT_command(CHECK_CONFIGURE_APN);
 	osDelay(150);
 	receive_response("Check Configuring APN\n");
 }
@@ -505,7 +505,7 @@ int configure_APN(int context_id){
 
 void check_activate_context(){
 	uint8_t command[128];
-	snprintf((char *)command, sizeof(command), "AT+QIACT?\r\n");
+	snprintf((char *)command, sizeof(command), CHECK_ACTIVATE_CONTEXT);
 	send_AT_command((char*)command);
 	receive_response("CHECK Activate CONTEXT");
 }
@@ -534,21 +534,21 @@ int deactivate_context(int context_id){
 	int count_error = 0;
 	osDelay(100);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-			snprintf((char *)command, sizeof(command), "AT+QIDEACT=%d\r\n", context_id);
-			send_AT_command((char*)command);
-			receive_response("DEACTIVATE CONTEXT");
-			if (strstr((char *) response, "ERROR") != NULL){
-				count_error++;
-				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-				SIM_UART_ReInitializeRxDMA();
-			}
-			if (count_error >= 5){
-				uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module");
-				reboot_SIM_module();
-				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-				SIM_UART_ReInitializeRxDMA();
-				return 0;
-			}
+		snprintf((char *)command, sizeof(command), "AT+QIDEACT=%d\r\n", context_id);
+		send_AT_command((char*)command);
+		receive_response("DEACTIVATE CONTEXT");
+		if (strstr((char *) response, "ERROR") != NULL){
+			count_error++;
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+		}
+		if (count_error >= 5){
+			uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module");
+			reboot_SIM_module();
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
 	}
 	count_error = 0;
 	receive_response("DEACTIVATE CONTEXT");
@@ -589,7 +589,9 @@ int open_socket_service(int context_id, int connect_id, int local_port, int acce
 	
 	if(first_pointer != NULL)
 	{
-		send_AT_command("AT+QISTATE=1,0\r\n");
+		//AT+QISTATE=<query_type>,<connectID>
+		snprintf((char *)command, sizeof(command), "AT+QISTATE=1,%d\r\n",connect_id);
+		send_AT_command((char*) command);
 		while(strstr((char *) response, CHECK_RESPONSE) == NULL){
 			receive_response("Check SOCKET CONNECTION\n");
 		}
@@ -601,9 +603,10 @@ int open_socket_service(int context_id, int connect_id, int local_port, int acce
 	else return 0;
 }
 
-void check_socket_connection(){
+//QPING command
+void check_socket_connection(int context_ID){
 	uint8_t command[256];
-	snprintf((char *)command, sizeof(command), "AT+QPING=1,\"%s\"\r\n", IP_ADDRESS);
+	snprintf((char *)command, sizeof(command), "AT+QPING=%d,\"%s\"\r\n",context_ID, IP_ADDRESS);
 	send_AT_command((char*)command);
 	char *first_pointer = NULL;
 	char *second_pointer = NULL;
@@ -705,8 +708,6 @@ void receiveRMCDataGSM(void) {
 	uart_transmit_string(&huart1, (uint8_t*)"Inside Receiving RMC Data GSM\n");
 	osEvent evt = osMailGet(RMC_MailQGSMId, 90000); // Wait for mail
 	
-	int countReceived = 0;
-	//if(evt.status == osEventMail){
 	if(evt.status == osEventMail){
 		uart_transmit_string(&huart1, (uint8_t*)"Received  RMC Data GSM\n");
 		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
@@ -768,6 +769,7 @@ void StartGSM(void const * argument)
 	init_SIM_module();
 	int isReady = 0;
 	int process = 0;
+	int countSendingDelay = 0;
 //HAL_UART_Receive_DMA(&huart1, rx_buffer, 128);
 	for(;;)
 	{
@@ -781,7 +783,7 @@ void StartGSM(void const * argument)
 				if(isReady) process++;
 				break;
 			case 1:
-			// Check status of SIM. Wait until SIM is ready
+				// Check status of SIM. Wait until SIM is ready
 				uart_transmit_string(&huart1, (uint8_t *)"Check EVERYTHING READY\r\n");
 				osDelay(100);
 
@@ -803,7 +805,7 @@ void StartGSM(void const * argument)
 				else process++;
 				break;
 			case 2:
-			// Configure the PDP context
+				// Configure the PDP context
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Configure PDP context\r\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
@@ -813,7 +815,7 @@ void StartGSM(void const * argument)
 				SIM_UART_ReInitializeRxDMA();
 				break;
 			case 3: 
-			//Activate the PDP context.
+				//Activate the PDP context.
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Activate PDP context\r\n");
 				activate_context(1);
 				osDelay(200);
@@ -822,7 +824,7 @@ void StartGSM(void const * argument)
 				SIM_UART_ReInitializeRxDMA();
 				break;
 			case 4: 
-					//Open socket service
+				//Open socket service
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: OPEN SOCKET SERVICE\r\n");
 				int received_res = open_socket_service(1, 0, 0, 0);
 				if(received_res){
@@ -838,6 +840,7 @@ void StartGSM(void const * argument)
 				}
 				break;
 			case 5:
+				// REGISTER/LOGIN TO THE SERVER
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Register/Login to the server.\r\n");
 				send_data_to_server(0,message_array, message_length);
 				free(message_array);
@@ -850,18 +853,34 @@ void StartGSM(void const * argument)
 				process++;
 				break;
 			case 7:
+				//Send Location
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Send Location\r\n");
-				receiveRMCDataGSM();
-				for(size_t idx = 0; idx < 6 ; idx++){
-					get_RTC_time_date();
-					osDelay(500);
-				}
-				if(received_RMC == 1){
-					save_rmc_to_location_info(&location_info);
-					location_report_message_array = convert_location_info_to_array(&location_info, &location_report_message_length);
-					//snprintf((char *)output_location, 256, "7E02000032001234567891000A000000000000000001406786064E4CC4000000000000%02d%02d%02d%02d%02d%02d0104000000002A020000300113310100FD0403F100000A7E",rmc_jt.date.Yr, rmc_jt.date.Mon, rmc_jt.date.Day, rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
-					send_data_to_server(0, location_report_message_array ,location_report_message_length);
-					received_RMC = 0;
+				while(countSendingDelay < 9){
+					receiveRMCDataGSM();
+					for(size_t idx = 0; idx < 1 ; idx++){
+//						osDelay(500);
+						get_RTC_time_date();
+					}
+					if(received_RMC == 1){
+						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
+						countSendingDelay++;
+						char output_elapsed[128];
+						snprintf(output_elapsed, 128, "Sending Delay GSM GSM GSM: %d\n", countSendingDelay);
+						uart_transmit_string(&huart1, (uint8_t *)countSendingDelay);
+
+						if(countSendingDelay >= 9){
+							save_rmc_to_location_info(&location_info);
+							location_report_message_array = convert_location_info_to_array(&location_info, &location_report_message_length);
+							//snprintf((char *)output_location, 256, "7E02000032001234567891000A000000000000000001406786064E4CC4000000000000%02d%02d%02d%02d%02d%02d0104000000002A020000300113310100FD0403F100000A7E",rmc_jt.date.Yr, rmc_jt.date.Mon, rmc_jt.date.Day, rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
+							send_data_to_server(0, location_report_message_array ,location_report_message_length);
+							countSendingDelay = 0;
+							uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Sending Location Report\r\n");
+							check_data_sent_to_server(0);
+							receive_response("Check location report\n");
+						}
+						received_RMC = 0;
+					}
+					osDelay(200);
 				}
 				process++;
 				break;
