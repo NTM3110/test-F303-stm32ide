@@ -12,8 +12,8 @@
 ../Core/Src/spi_flash.c:165:5:W25_ReadData	3
 ../Core/Src/spi_flash.c:185:6:receiveTaxData	6
 ../Core/Src/spi_flash.c:234:10:calculate_epoch_time_utc	1
-../Core/Src/spi_flash.c:255:6:format_rmc_data	1
-../Core/Src/spi_flash.c:264:6:saveRMC	6
-../Core/Src/spi_flash.c:309:6:receiveRMCDataFromGPS	3
-../Core/Src/spi_flash.c:360:6:sendRMCDataToGSM	2
-../Core/Src/spi_flash.c:369:6:StartSpiFlash	2
+../Core/Src/spi_flash.c:251:6:format_rmc_data	1
+../Core/Src/spi_flash.c:260:6:saveRMC	7
+../Core/Src/spi_flash.c:308:6:receiveRMCDataFromGPS	3
+../Core/Src/spi_flash.c:359:6:sendRMCDataToGSM	2
+../Core/Src/spi_flash.c:368:6:StartSpiFlash	2

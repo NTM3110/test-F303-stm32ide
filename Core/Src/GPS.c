@@ -183,8 +183,8 @@ void getRMC(){
 		rmc_str[i] = 0;
 	}
 	if(isRMCExist == 1){
-		//parse_rmc(rmc_str);
-		//display_rmc_data(&huart1);
+//		parse_rmc(rmc_str);
+//		display_rmc_data(&huart1);
 		if(rmc.isValid == 1){
 			sendRMCDataToFlash(&rmc);
 			//sendRMCDataToGSM(&rmc);
@@ -209,7 +209,7 @@ void StartGPS(void const * argument)
 	HAL_UART_Transmit(&huart1,(uint8_t*) "STARTING GPS", strlen("STARTING GPS"), 1000);
 	/* USER CODE BEGIN StartGPS */
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
-	/* Infinite loop */
+//	/* Infinite loop */
 	rmc.tim.hour = 10;
 	rmc.tim.min = 12;
 	rmc.tim.sec = 0;
@@ -225,7 +225,6 @@ void StartGPS(void const * argument)
 	rmc.date.Yr = 2024;
 	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
-	int countSent = 0;
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{

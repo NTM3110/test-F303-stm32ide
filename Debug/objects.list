@@ -4,6 +4,7 @@
 "./Core/Src/RFID.o"
 "./Core/Src/RS232-UART1.o"
 "./Core/Src/RS232-UART2.o"
+"./Core/Src/RTC.o"
 "./Core/Src/freertos.o"
 "./Core/Src/main.o"
 "./Core/Src/spi_flash.o"

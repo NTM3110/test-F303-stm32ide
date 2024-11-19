@@ -225,21 +225,17 @@ void receiveTaxData(void) {
 		W25_Reset();
 		W25_PageProgram(address_tax, taxBufferDemo, 128);
 		current_addr = address_tax;
-		address_tax+=128;
+		address_tax += 128;
 		HAL_Delay(1000);
 		memset(flashBufferTaxReceived, 0x00,128);
 	}
 }
 
 uint32_t calculate_epoch_time_utc(DATE *date, TIME *time) {
-	uart_transmit_string(&huart1, (uint8_t*) "Calculate Epoch data");
     struct tm timeinfo;
 		uint8_t output_buffer[128];
     // Set up time structure
     timeinfo.tm_year = date->Yr - 1900; // - 1900 + 2000
-		snprintf((char*)output_buffer, 128, "YEAR IN TIMEINFO: %d \n", timeinfo.tm_year);
-		uart_transmit_string(&huart1, output_buffer);
-		
     timeinfo.tm_mon = date->Mon - 1;
     timeinfo.tm_mday = date->Day;
     timeinfo.tm_hour = time->hour;
@@ -253,7 +249,7 @@ uint32_t calculate_epoch_time_utc(DATE *date, TIME *time) {
 }
 
 void format_rmc_data(RMCSTRUCT *rmc_data, char *output_buffer, size_t buffer_size) {
-	uart_transmit_string(&huart1, (uint8_t*) "Format RMC data");
+	//uart_transmit_string(&huart1, (uint8_t*) "Format RMC data");
     uint32_t epoch_time = calculate_epoch_time_utc(&rmc_data->date, &rmc_data->tim);
 
     // Format all fields in a single line with semicolon separation, including date
@@ -298,7 +294,10 @@ void saveRMC(){
 	uart_transmit_string(&huart1, rmcBufferDemo);
 	current_addr = address_rmc;
 	address_rmc+=128;
-	if(current_addr == 0x3E80){
+	if(address_rmc % 0x1000 == 0x0){
+		W25_SectorErase(address_rmc);
+	}
+	if(current_addr == 0x89C0){
 		address_rmc = 0x3000;
 		W25_SectorErase(address_rmc);
 	}
@@ -314,21 +313,21 @@ void receiveRMCDataFromGPS(void) {
 	uart_transmit_string(&huart1, (uint8_t*)"Inside Receiving RMC Data SPI FLASH\n");
 	osEvent evt = osMailGet(RMC_MailQFLASHId, osWaitForever); // Wait for mail
 	if(evt.status == osEventMail){
-		uart_transmit_string(&huart1, (uint8_t*)"Received  RMC Data SPI FLASH\n");
+		uart_transmit_string(&huart1, (uint8_t*)"\nReceived  RMC Data SPI FLASH: \n");
 		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
-		// Process received data (e.g., display, log, or store data)
-//		snprintf((char *)output_buffer, sizeof(output_buffer), "Time Received FLASH: %d:%d:%d\n", receivedData->tim.hour, receivedData->tim.min, receivedData->tim.sec);
-//		uart_transmit_string(&huart1, output_buffer);
-//
-//		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FLASH : %d/%d/%d\n", receivedData->date.Day, receivedData->date.Mon, receivedData->date.Yr);
-//		uart_transmit_string(&huart1, output_buffer);
-//
-//		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", receivedData->lcation.latitude, receivedData->lcation.NS, receivedData->lcation.longitude, receivedData->lcation.EW);
-//		uart_transmit_string(&huart1, output_buffer);
-//
-//		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", receivedData->speed, receivedData->course, receivedData->isValid);
-//		uart_transmit_string(&huart1, output_buffer);
+//		 Process received data (e.g., display, log, or store data)
+		snprintf((char *)output_buffer, sizeof(output_buffer), "Time Received FLASH: %d:%d:%d\n", receivedData->tim.hour, receivedData->tim.min, receivedData->tim.sec);
+		uart_transmit_string(&huart1, output_buffer);
 
+		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FLASH : %d/%d/%d\n", receivedData->date.Day, receivedData->date.Mon, receivedData->date.Yr);
+		uart_transmit_string(&huart1, output_buffer);
+
+		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", receivedData->lcation.latitude, receivedData->lcation.NS, receivedData->lcation.longitude, receivedData->lcation.EW);
+		uart_transmit_string(&huart1, output_buffer);
+
+		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", receivedData->speed, receivedData->course, receivedData->isValid);
+		uart_transmit_string(&huart1, output_buffer);
+		uart_transmit_string(&huart1, (uint8_t*)"\n\n");
 
 		//Sending DATA to GSM
 		rmc_flash.lcation.latitude = receivedData->lcation.latitude;
@@ -339,13 +338,13 @@ void receiveRMCDataFromGPS(void) {
 		rmc_flash.lcation.EW = receivedData->lcation.EW;
 		rmc_flash.isValid = receivedData->isValid;
 
-		uart_transmit_string(&huart1, (uint8_t*)"RMC Data  Saved GSM\n");
-		// Process received data (e.g., display, log, or store data)
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", rmc_flash.lcation.latitude, rmc_flash.lcation.NS, rmc_flash.lcation.longitude, rmc_flash.lcation.EW);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", rmc_flash.speed, rmc_flash.course, rmc_flash.isValid);
-		uart_transmit_string(&huart1, output_buffer);
+//		uart_transmit_string(&huart1, (uint8_t*)"RMC Data  Saved GSM\n");
+//		// Process received data (e.g., display, log, or store data)
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", rmc_flash.lcation.latitude, rmc_flash.lcation.NS, rmc_flash.lcation.longitude, rmc_flash.lcation.EW);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", rmc_flash.speed, rmc_flash.course, rmc_flash.isValid);
+//		uart_transmit_string(&huart1, output_buffer);
 
 		format_rmc_data(receivedData,(char*) rmcBufferDemo, 128);
 		if(countRMCReceived == 5){
@@ -375,8 +374,8 @@ void StartSpiFlash(void const * argument)
 	osMailQDef(GSM_MailQ, 11, RMCSTRUCT);
 	RMC_MailQGSMId = osMailCreate(osMailQ(GSM_MailQ), NULL);
 	for(;;){
-		osDelay(1000);
-		uart_transmit_string(&huart1, (uint8_t*) "INSIDE SPI FLASH\n");
+		osDelay(1500);
+		//uart_transmit_string(&huart1, (uint8_t*) "INSIDE SPI FLASH\n");
 		W25_Reset();
 		W25_ReadJedecID();
 		W25_Reset();
@@ -390,7 +389,7 @@ void StartSpiFlash(void const * argument)
 		sendRMCDataToGSM(&rmc_flash);
 
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
-		osDelay(1000);
+		osDelay(1500);
   }
   /* USER CODE END StartSpiFlash */
 }

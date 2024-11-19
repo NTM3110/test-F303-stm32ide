@@ -62,7 +62,7 @@ int W25_ReadJedecID();
 int W25_ReadUniqueID(uint8_t *buf, int bufSize);
 int W25_ReadMD(uint8_t *buf, int bufSize);
 // Send Write Enable command, allowing writing to the device
-int W25_WriteEnable(void);
+int W25_WriteEnable(void );
 void W25_Reset();
 // Erase a 4096 byte sector
 int W25_SectorErase(uint32_t address);

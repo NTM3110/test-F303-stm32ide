@@ -85,6 +85,7 @@ extern RTC_HandleTypeDef hrtc;
 
 extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef htim3;
 
 extern osMailQId RMC_MailQGSMId;
 
@@ -95,7 +96,7 @@ void init_SIM_module();
 
 int configure_APN(int context_id);
 
-void activate_context(int context_id);
+int activate_context(int context_id);
 
 void check_activate_context();
 

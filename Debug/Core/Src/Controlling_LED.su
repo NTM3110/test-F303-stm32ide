@@ -1,2 +1,6 @@
-../Core/Src/Controlling_LED.c:5:6:Blink_LED	8	static
-../Core/Src/Controlling_LED.c:12:6:StartControllingLED	8	static
+../Core/Src/Controlling_LED.c:20:6:RingBufferDmaU8_initADCRx	4	static
+../Core/Src/Controlling_LED.c:29:6:ADC2_ReInitializeRxDMA	8	static
+../Core/Src/Controlling_LED.c:39:6:Blink_LED	8	static
+../Core/Src/Controlling_LED.c:46:6:sendUint32Array	24	dynamic
+../Core/Src/Controlling_LED.c:62:6:setUint32Array	16	static
+../Core/Src/Controlling_LED.c:70:6:StartControllingLED	8	static
