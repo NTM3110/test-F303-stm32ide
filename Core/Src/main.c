@@ -169,18 +169,16 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-//
-//  /* definition and creation of ControllingLED */
-//  osThreadDef(ControllingLED, StartControllingLED, osPriorityIdle, 0, 128);
-//  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
-//
-//  /* definition and creation of UART1 */
+
+  /* definition and creation of ControllingLED */
+  osThreadDef(ControllingLED, StartControllingLED, osPriorityIdle, 0, 256);
+  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
+
+  /* definition and creation of UART1 */
 //  osThreadDef(UART1, StartUART1, osPriorityIdle, 0, 128);
 //  UART1Handle = osThreadCreate(osThread(UART1), NULL);
-  osThreadDef(GSM, StartGSM, osPriorityNormal, 0, 1688);
-  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* definition and creation of SpiFlash */
   osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1024);
@@ -190,12 +188,13 @@ int main(void)
   osThreadDef(GPS, StartGPS, osPriorityIdle, 0, 640);
   GPSHandle = osThreadCreate(osThread(GPS), NULL);
 
-//  /* definition and creation of RFID */
+  /* definition and creation of RFID */
 //  osThreadDef(RFID, StartRFID, osPriorityIdle, 0, 128);
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
-
-  /* definition and creation of GSM */
-
+//
+//  /* definition and creation of GSM */
+//  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
+//  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -205,17 +204,13 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
-  HAL_TIM_Base_Start(&htim3); // Start the base timer
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-//	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-//	 Delay_1s();
-//
-//	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-//	 Delay_1s();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

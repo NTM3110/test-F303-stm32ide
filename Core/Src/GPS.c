@@ -9,6 +9,8 @@
 #include "system_management.h"
 #include <time.h>
 
+#include "RTC.h"
+#include "spi_flash.h"
 
 uint8_t rmc_str[128]= {0};
 RingBufferDmaU8_TypeDef GPSRxDMARing;
@@ -50,33 +52,26 @@ void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
 void display_rmc_data(UART_HandleTypeDef *huart) {
     uint8_t output_buffer[50];
 
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Time: %02d:%02d:%02d\r\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Time: %02d:%02d:%02d\r\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Date: %02d/%02d/%04d\r\n", rmc.date.Day, rmc.date.Mon, rmc.date.Yr);
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Date: %02d/%02d/%04d\r\n", rmc.date.Day, rmc.date.Mon, rmc.date.Yr);
 	
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Latitude: %.6f %c\r\n", rmc.lcation.latitude, rmc.lcation.NS);
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Latitude: %.6f %c\r\n", rmc.lcation.latitude, rmc.lcation.NS);
 
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Longitude: %.6f %c\r\n", rmc.lcation.longitude, rmc.lcation.EW);
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Longitude: %.6f %c\r\n", rmc.lcation.longitude, rmc.lcation.EW);
 
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Speed: %.1f knots\r\n", rmc.speed);
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Speed: %.1f knots\r\n", rmc.speed);
 
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Course: %.1f\r\n", rmc.course);
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Course: %.1f\r\n", rmc.course);
 
-    snprintf((char *)output_buffer, sizeof(output_buffer), "Validity: %s\r\n", rmc.isValid ? "Valid" : "Invalid");
-    uart_transmit_string(huart, output_buffer);
+    Debug_printf("Validity: %s\r\n", rmc.isValid ? "Valid" : "Invalid");
 }
 
 time_t convertToEpoch(int year, int month, int day, int hour, int min, int sec) {
     struct tm timeinfo;
 
     // Set timeinfo fields
-    timeinfo.tm_year = year - 1900; // Year since 1900
+    timeinfo.tm_year = year + 100; // Year since 1900
     timeinfo.tm_mon = month - 1;    // Month (0-11, so subtract 1)
     timeinfo.tm_mday = day;         // Day of the month
     timeinfo.tm_hour = hour;        // Hour (0-23)
@@ -136,7 +131,7 @@ void parse_rmc(uint8_t *rmc_sentence) {
                 case 9:  // Date: ddmmyy
                     rmc.date.Day = (rmc_sentence[0] - '0') * 10 + (rmc_sentence[1] - '0');
                     rmc.date.Mon = (rmc_sentence[2] - '0') * 10 + (rmc_sentence[3] - '0');
-                    rmc.date.Yr = 2000 + (rmc_sentence[4] - '0') * 10 + (rmc_sentence[5] - '0');
+                    rmc.date.Yr = (rmc_sentence[4] - '0') * 10 + (rmc_sentence[5] - '0');
                     break;
             }
 
@@ -185,6 +180,8 @@ void getRMC(){
 	if(isRMCExist == 1){
 //		parse_rmc(rmc_str);
 //		display_rmc_data(&huart1);
+		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
+		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 		if(rmc.isValid == 1){
 			sendRMCDataToFlash(&rmc);
 			//sendRMCDataToGSM(&rmc);
@@ -198,11 +195,8 @@ void getRMC(){
 		GPS_ENABLE();
 		getRMC_time = 0;
 	}
-	char output_elapsed[128];
-	snprintf(output_elapsed, 128, "Elapsed Time blabla: %d\n", getRMC_time);
-	uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
+	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
 	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
-	
 }
 void StartGPS(void const * argument)
 {
@@ -210,8 +204,8 @@ void StartGPS(void const * argument)
 	/* USER CODE BEGIN StartGPS */
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 //	/* Infinite loop */
-	rmc.tim.hour = 10;
-	rmc.tim.min = 12;
+	rmc.tim.hour = 9;
+	rmc.tim.min = 0;
 	rmc.tim.sec = 0;
 	rmc.lcation.latitude = 20.998022;
 	rmc.lcation.longitude = 105.794756;
@@ -220,9 +214,9 @@ void StartGPS(void const * argument)
 	rmc.lcation.NS = 'N';
 	rmc.lcation.EW = 'E';
 	rmc.isValid = 1;
-	rmc.date.Day = 9;
+	rmc.date.Day = 23;
 	rmc.date.Mon = 11;
-	rmc.date.Yr = 2024;
+	rmc.date.Yr = 24;
 	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
@@ -231,10 +225,11 @@ void StartGPS(void const * argument)
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 		HAL_Delay(1000);
 		getRMC();
+		rmc.lcation.latitude -= 0.00001;
 //		rmc.tim.sec += 2;
 		HAL_UART_Transmit(&huart1, (uint8_t *)"Getting GPS \n", strlen("Getting GPS \n"), 1000);
+		uart_transmit_string(&huart1,(uint8_t*) "\n\n ");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
 		HAL_Delay(1000);
 	}
   /* USER CODE END StartGPS */

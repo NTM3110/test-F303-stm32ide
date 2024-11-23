@@ -53,7 +53,7 @@ Core/Src/spi_flash.o: ../Core/Src/spi_flash.c ../Core/Inc/spi_flash.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
  ../Core/Inc/RS232-UART1.h ../Core/Inc/system_management.h \
- ../Core/Inc/gps.h ../Core/Inc/RS232-UART1.h
+ ../Core/Inc/GPS.h ../Core/Inc/RS232-UART1.h ../Core/Inc/RTC.h
 ../Core/Inc/spi_flash.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
@@ -111,5 +111,6 @@ Core/Src/spi_flash.o: ../Core/Src/spi_flash.c ../Core/Inc/spi_flash.h \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h:
 ../Core/Inc/RS232-UART1.h:
 ../Core/Inc/system_management.h:
-../Core/Inc/gps.h:
+../Core/Inc/GPS.h:
 ../Core/Inc/RS232-UART1.h:
+../Core/Inc/RTC.h:

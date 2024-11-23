@@ -4,8 +4,12 @@
 #include "cmsis_os.h"
 #include "RS232-UART1.h"
 #include "system_management.h"
-#include "gps.h"
+
+#include "GPS.h"
+
 #include <time.h>
+#include "RTC.h"
+
 
 extern UART_HandleTypeDef huart1;
 uint32_t address_tax = 0x1000;
@@ -21,6 +25,7 @@ uint8_t taxBufferDemo[128];
 uint8_t rmcBufferDemo[128];
 
 RMCSTRUCT rmc_flash;
+GSM_MAIL_STRUCT mail_gsm;
 
 int W25_ChipErase(void)
 {
@@ -253,11 +258,36 @@ void format_rmc_data(RMCSTRUCT *rmc_data, char *output_buffer, size_t buffer_siz
     uint32_t epoch_time = calculate_epoch_time_utc(&rmc_data->date, &rmc_data->tim);
 
     // Format all fields in a single line with semicolon separation, including date
-    snprintf(output_buffer, buffer_size, "%d;%d;%d;%d;%d;%d;%.4f;%c;%.4f;%c;%.1f;%.1f;%s;%u", rmc_data->date.Day, rmc_data->date.Mon, rmc_data->date.Yr, rmc_data->tim.hour, rmc_data->tim.min, rmc_data->tim.sec, rmc_data->lcation.latitude, rmc_data->lcation.NS, rmc_data->lcation.longitude, rmc_data->lcation.EW, rmc_data->speed, rmc_data->course, rmc_data->isValid ? "Valid" : "Invalid", epoch_time);
+    snprintf(output_buffer, buffer_size, "%d;%d;%d;%d;%d;%d;%.6f;%c;%.6f;%c;%.1f;%.1f;%s;%u", rmc_data->date.Yr, rmc_data->date.Mon, rmc_data->date.Day, rmc_data->tim.hour, rmc_data->tim.min, rmc_data->tim.sec, rmc_data->lcation.latitude, rmc_data->lcation.NS, rmc_data->lcation.longitude, rmc_data->lcation.EW, rmc_data->speed, rmc_data->course, rmc_data->isValid ? "Valid" : "Invalid", epoch_time);
 }
 
+void SendUInt8ArrayToMailQueue(const uint8_t *inputData, size_t length) {
+    // Allocate memory for the mail structure
+    UInt8Mail *mail = (UInt8Mail *)osMailAlloc(uint8MailQueue, osWaitForever);
+    if (mail != NULL) {
+        // Allocate memory for the uint8_t array
+        mail->data = malloc(length);
+        if (mail->data != NULL) {
+            // Copy the array data
+            memcpy(mail->data, inputData, length);
+            mail->length = length;
+
+            // Send the mail
+            if (osMailPut(uint8MailQueue, mail) != osOK) {
+                // Handle failure to put mail
+                free(mail->data);           // Free allocated memory
+                osMailFree(uint8MailQueue, mail);
+
+            }
+        } else {
+            // Handle memory allocation failure
+            osMailFree(uint8MailQueue, mail);
+        }
+    }
+}
 
 void saveRMC(){
+	Debug_printf("\n\n Inside SAVING RMC TO FLASH \n\n");
 	int k = 0;
 	int j = 0;
 	W25_Reset();
@@ -267,10 +297,10 @@ void saveRMC(){
 	}
 	
 	for(size_t i = 0; i < 128; i++){
-			if(rmcBufferDemo[i] != 0x00 && rmcBufferDemo[i+1] == 0x00){
-				k = i;
-				break;
-			}
+		if(rmcBufferDemo[i] != 0x00 && rmcBufferDemo[i+1] == 0x00){
+			k = i;
+			break;
+		}
 	}
 	char addr_out[10];
 	sprintf(addr_out, "%08x", address_rmc);
@@ -288,21 +318,59 @@ void saveRMC(){
 	{
 		rmcBufferDemo[j+k+1]=0x00;
 	}
+
+//	SendUInt8ArrayToMailQueue(rmcBufferDemo,128);
+
 	W25_Reset();
 	W25_PageProgram(address_rmc, rmcBufferDemo, 128);
 	uart_transmit_string(&huart1, (uint8_t*) "Buffer before saving to FLASH: ");
 	uart_transmit_string(&huart1, rmcBufferDemo);
 	current_addr = address_rmc;
 	address_rmc+=128;
-	if(address_rmc % 0x1000 == 0x0){
+	if(address_rmc % 0x1000 == 0x0000){
+		Debug_printf("\n\nErasing SECTOR IN ADVANCE\n");
 		W25_SectorErase(address_rmc);
 	}
-	if(current_addr == 0x89C0){
+	if(current_addr >= 0x89C0){
 		address_rmc = 0x3000;
 		W25_SectorErase(address_rmc);
 	}
 	HAL_Delay(1000);
+	Debug_printf("\n");
 	memset(flashBufferRMCReceived, 0x00,128);
+}
+
+void sendRMCDataToGSM(RMCSTRUCT *rmcData){
+	if(rmcData->date.Yr >= 24){
+		HAL_UART_Transmit(&huart1, (uint8_t*) "\n\n\nSENDING RMC TO GSM\n\n",  strlen("\n\n\nSENDING RMC TO GSM\n\n") , HAL_MAX_DELAY);
+		RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQLEDId, osWaitForever); // Allocate memory for mail
+		if (mail != NULL) {
+			*mail = *rmcData; // Copy data into allocated memory
+			osMailPut(RMC_MailQLEDId, mail); // Put message in queue
+		}
+	}
+}
+
+void sendRMCDataWithAddrToGSM(GSM_MAIL_STRUCT *mail_data){
+	if(mail_data->rmc.date.Yr >= 24){
+		HAL_UART_Transmit(&huart1, (uint8_t*) "\n\n\nSENDING RMC with Addr TO GSM\n\n",  strlen("\n\n\nSENDING RMC with Addr TO GSM\n\n") , HAL_MAX_DELAY);
+		GSM_MAIL_STRUCT *mail = (GSM_MAIL_STRUCT *)osMailAlloc(RMC_MailQLEDId, osWaitForever); // Allocate memory for mail
+		if (mail != NULL) {
+			*mail = *mail_data; // Copy data into allocated memory
+			osMailPut(RMC_MailQLEDId, mail); // Put message in queue
+		}
+	}
+}
+
+
+void sendAddresstoGSM(){
+	if(rmc_flash.date.Yr >= 24){
+		uint32_t *mail = (uint32_t *)osMailAlloc(addr_MailQGSMId, osWaitForever);
+		if (mail != NULL) {
+			*mail = current_addr; // Copy the data
+			osMailPut(addr_MailQGSMId, mail); // Send the mail
+		}
+	}
 }
 
 void receiveRMCDataFromGPS(void) {
@@ -316,18 +384,18 @@ void receiveRMCDataFromGPS(void) {
 		uart_transmit_string(&huart1, (uint8_t*)"\nReceived  RMC Data SPI FLASH: \n");
 		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
 //		 Process received data (e.g., display, log, or store data)
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Time Received FLASH: %d:%d:%d\n", receivedData->tim.hour, receivedData->tim.min, receivedData->tim.sec);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FLASH : %d/%d/%d\n", receivedData->date.Day, receivedData->date.Mon, receivedData->date.Yr);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", receivedData->lcation.latitude, receivedData->lcation.NS, receivedData->lcation.longitude, receivedData->lcation.EW);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", receivedData->speed, receivedData->course, receivedData->isValid);
-		uart_transmit_string(&huart1, output_buffer);
-		uart_transmit_string(&huart1, (uint8_t*)"\n\n");
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Time Received FLASH: %d:%d:%d\n", receivedData->tim.hour, receivedData->tim.min, receivedData->tim.sec);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FLASH : %d/%d/%d\n", receivedData->date.Day, receivedData->date.Mon, receivedData->date.Yr);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", receivedData->lcation.latitude, receivedData->lcation.NS, receivedData->lcation.longitude, receivedData->lcation.EW);
+//		uart_transmit_string(&huart1, output_buffer);
+//
+//		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", receivedData->speed, receivedData->course, receivedData->isValid);
+//		uart_transmit_string(&huart1, output_buffer);
+//		uart_transmit_string(&huart1, (uint8_t*)"\n\n");
 
 		//Sending DATA to GSM
 		rmc_flash.lcation.latitude = receivedData->lcation.latitude;
@@ -337,33 +405,60 @@ void receiveRMCDataFromGPS(void) {
 		rmc_flash.lcation.NS = receivedData->lcation.NS;
 		rmc_flash.lcation.EW = receivedData->lcation.EW;
 		rmc_flash.isValid = receivedData->isValid;
+		rmc_flash.tim.hour = receivedData->tim.hour;
+		rmc_flash.tim.min = receivedData->tim.min;
+		rmc_flash.tim.sec = receivedData->tim.sec;
+		rmc_flash.date.Yr = receivedData->date.Yr;
+		rmc_flash.date.Mon = receivedData->date.Mon;
+		rmc_flash.date.Day = receivedData->date.Day;
 
+
+		get_RTC_time_date(&rmc_flash);
 //		uart_transmit_string(&huart1, (uint8_t*)"RMC Data  Saved GSM\n");
 //		// Process received data (e.g., display, log, or store data)
-//		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FLASH: %.6f %c, %.6f %c\n", rmc_flash.lcation.latitude, rmc_flash.lcation.NS, rmc_flash.lcation.longitude, rmc_flash.lcation.EW);
-//		uart_transmit_string(&huart1, output_buffer);
-//
-//		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FLASH: %.2f, Course: %.2f, Valid: %d\n", rmc_flash.speed, rmc_flash.course, rmc_flash.isValid);
-//		uart_transmit_string(&huart1, output_buffer);
+		snprintf((char *)output_buffer, sizeof(output_buffer), "\n\nTime Received from GPS AT SPI FLASH: %d:%d:%d\n", rmc_flash.tim.hour, rmc_flash.tim.min, rmc_flash.tim.sec);
+		uart_transmit_string(&huart1, output_buffer);
 
-		format_rmc_data(receivedData,(char*) rmcBufferDemo, 128);
-		if(countRMCReceived == 5){
+		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FROM GPS AT SPI FLASH : %d/%d/%d\n", rmc_flash.date.Day, rmc_flash.date.Mon, rmc_flash.date.Yr);
+		uart_transmit_string(&huart1, output_buffer);
+
+		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FROM GPS AT SPI FLASH: %.6f %c, %.6f %c\n", rmc_flash.lcation.latitude, rmc_flash.lcation.NS, rmc_flash.lcation.longitude, rmc_flash.lcation.EW);
+		uart_transmit_string(&huart1, output_buffer);
+
+		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FROM GPS AT SPI FLASH: %.2f, Course: %.2f, Valid: %d\n\n\n", rmc_flash.speed, rmc_flash.course, rmc_flash.isValid);
+		uart_transmit_string(&huart1, output_buffer);
+
+		format_rmc_data(&rmc_flash,(char*) rmcBufferDemo, 128);
+
+		if(rmc_flash.date.Yr >= 24){
+			//sendRMCDataToGSM(&rmc_flash);
+			mail_gsm.rmc.lcation.latitude = rmc_flash.lcation.latitude;
+			mail_gsm.rmc.lcation.longitude = rmc_flash.lcation.longitude;
+			mail_gsm.rmc.speed = rmc_flash.speed;
+			mail_gsm.rmc.course = rmc_flash.course;
+			mail_gsm.rmc.lcation.NS = rmc_flash.lcation.NS;
+			mail_gsm.rmc.lcation.EW = rmc_flash.lcation.EW;
+			mail_gsm.rmc.isValid = rmc_flash.isValid;
+			mail_gsm.rmc.tim.hour = rmc_flash.tim.hour;
+			mail_gsm.rmc.tim.min = rmc_flash.tim.min;
+			mail_gsm.rmc.tim.sec = rmc_flash.tim.sec;
+			mail_gsm.rmc.date.Yr = rmc_flash.date.Yr;
+			mail_gsm.rmc.date.Mon = rmc_flash.date.Mon;
+			mail_gsm.rmc.date.Day = rmc_flash.date.Day;
+			mail_gsm.address = current_addr;
+//			sendAddresstoGSM();
 			saveRMC();
+			sendRMCDataWithAddrToGSM(&mail_gsm);
 			countRMCReceived = 0;
 		}
-		osMailFree(RMC_MailQFLASHId, receivedData); // Free memory after use
-		countRMCReceived++;
+		osMailFree(RMC_MailQFLASHId, receivedData);
+		// Free memory after use
+//		if(rmc_flash.date.Yr >= 24)
+//			countRMCReceived++;
 	}
 }
 
-void sendRMCDataToGSM(RMCSTRUCT *rmcData) {
-	HAL_UART_Transmit(&huart1, (uint8_t*) "SENDING RMC TO GSM\n",  strlen("SENDING RMC TO GSM\n") , HAL_MAX_DELAY);
-    RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQGSMId, osWaitForever); // Allocate memory for mail
-    if (mail != NULL) {
-        *mail = *rmcData; // Copy data into allocated memory
-        osMailPut(RMC_MailQGSMId, mail); // Put message in queue
-    }
-}
+
 
 void StartSpiFlash(void const * argument)
 {
@@ -373,6 +468,8 @@ void StartSpiFlash(void const * argument)
 
 	osMailQDef(GSM_MailQ, 11, RMCSTRUCT);
 	RMC_MailQGSMId = osMailCreate(osMailQ(GSM_MailQ), NULL);
+
+
 	for(;;){
 		osDelay(1500);
 		//uart_transmit_string(&huart1, (uint8_t*) "INSIDE SPI FLASH\n");
@@ -385,9 +482,6 @@ void StartSpiFlash(void const * argument)
 		HAL_UART_Transmit(&huart1, flashBufferRMCReceived, sizeof(flashBufferRMCReceived), 1000);
 		//receiveTaxData();
 		receiveRMCDataFromGPS();
-
-		sendRMCDataToGSM(&rmc_flash);
-
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
 		osDelay(1500);
   }

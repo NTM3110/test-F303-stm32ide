@@ -3,7 +3,6 @@
 
 #include "main.h"
 #include "RS232-UART1.h"
-#include "cmsis_os.h"
 
 #define SIM_RESPONSE_MAX_SIZE						384
 #define SIM_GPIO_Port								GPIOC
@@ -87,7 +86,8 @@ extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim3;
 
-extern osMailQId RMC_MailQGSMId;
+osMailQId RMC_MailQGSMId;
+osMailQId addr_MailQGSMId;
 
 void send_AT_command(const char *command);
 void receive_response(char *cmd_str);

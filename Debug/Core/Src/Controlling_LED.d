@@ -53,7 +53,8 @@ Core/Src/Controlling_LED.o: ../Core/Src/Controlling_LED.c \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/event_groups.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
  ../Core/Inc/RS232-UART1.h ../Core/Inc/main.h \
- ../Core/Inc/Controlling_LED.h
+ ../Core/Inc/Controlling_LED.h ../Core/Inc/system_management.h \
+ ../Core/Inc/GPS.h ../Core/Inc/RS232-UART1.h ../Core/Inc/spi_flash.h
 ../Core/Inc/main.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
 ../Core/Inc/stm32f3xx_hal_conf.h:
@@ -111,3 +112,7 @@ Core/Src/Controlling_LED.o: ../Core/Src/Controlling_LED.c \
 ../Core/Inc/RS232-UART1.h:
 ../Core/Inc/main.h:
 ../Core/Inc/Controlling_LED.h:
+../Core/Inc/system_management.h:
+../Core/Inc/GPS.h:
+../Core/Inc/RS232-UART1.h:
+../Core/Inc/spi_flash.h:
