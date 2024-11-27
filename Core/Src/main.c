@@ -67,6 +67,7 @@ osThreadId SpiFlashHandle;
 osThreadId GPSHandle;
 osThreadId RFIDHandle;
 osThreadId GSMHandle;
+osSemaphoreId timerBinarySemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -155,6 +156,11 @@ int main(void)
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
+  /* Create the semaphores(s) */
+  /* definition and creation of timerBinarySem */
+  osSemaphoreDef(timerBinarySem);
+  timerBinarySemHandle = osSemaphoreCreate(osSemaphore(timerBinarySem), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -171,12 +177,12 @@ int main(void)
   /* definition and creation of defaultTask */
 //  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-
-  /* definition and creation of ControllingLED */
-  osThreadDef(ControllingLED, StartControllingLED, osPriorityIdle, 0, 256);
-  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
-
-  /* definition and creation of UART1 */
+//
+//  /* definition and creation of ControllingLED */
+//  osThreadDef(ControllingLED, StartControllingLED, osPriorityIdle, 0, 128);
+//  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
+//
+//  /* definition and creation of UART1 */
 //  osThreadDef(UART1, StartUART1, osPriorityIdle, 0, 128);
 //  UART1Handle = osThreadCreate(osThread(UART1), NULL);
 
@@ -191,10 +197,10 @@ int main(void)
   /* definition and creation of RFID */
 //  osThreadDef(RFID, StartRFID, osPriorityIdle, 0, 128);
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
-//
-//  /* definition and creation of GSM */
-//  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
-//  GSMHandle = osThreadCreate(osThread(GSM), NULL);
+
+  /* definition and creation of GSM */
+  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
+  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */

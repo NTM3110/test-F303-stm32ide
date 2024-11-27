@@ -10,8 +10,11 @@
 #include "RTC.h"
 #include "spi_flash.h"
 #include "system_management.h"
-#include "Queue_GSM.h"
 
+enum MODE{
+	MAIL,
+	STORAGE
+};
 
 uint8_t TERMINAL_REGISTRATION[128];
 
@@ -19,11 +22,23 @@ uint8_t response[SIM_RESPONSE_MAX_SIZE];
 RingBufferDmaU8_TypeDef SIMRxDMARing;
 int is_activated = 0;
 int is_set_time = 0;
+int is_disconnect = 0;
 int received_RMC = 0;
+int is_ready_to_send = 0;
+int is_using_flash = 0;
+int is_in_sending = 0;
+
+int mode = MAIL;
+volatile uint32_t current_addr_gsm = 0;
+volatile uint32_t start_addr_disconnect = 0;
+volatile uint32_t end_addr_disconnect = 0;
+volatile uint32_t start_addr_not_ready = 0;
+volatile uint32_t end_addr_not_ready = 0;
+volatile uint32_t current_addr_not_ready = 0;
+
 int is_40s = 0;
 RMCSTRUCT rmc_jt;
 uint8_t terminal_phone_number[6] = {0};
-uint32_t addr_gsm[128];
 
 uint8_t flashBufferMailReceived[128];
 
@@ -223,7 +238,7 @@ void save_rmc_to_location_info(JT808_LocationInfoReport* location_info){
 	location_info->direction[0] = (direction >> 8) & 0xFF;
 	location_info->direction[1] =  direction & 0xFF;
 	
-	set_status_bit(&(location_info->status));
+	set_status_bit(location_info->status);
 }
 
 
@@ -826,7 +841,7 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 	while(strstr((char *) response, "+QIURC") == NULL){
 		char output_elapsed[128];
 		receive_response("Check sending to server\n");
-		if(count_check >= 3){
+		if(count_check >= 6){
 			count_check = 0;
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
@@ -837,7 +852,7 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
-		 if (strstr(response, "closed") != NULL) {
+		 if (strstr((char*)response, "closed") != NULL) {
 			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			 SIM_UART_ReInitializeRxDMA();
 			 return 2;
@@ -1011,65 +1026,6 @@ int getCurrentTime(){
 		return 1;
 	else return 0;
 }
-void receiveRMCDataGSM(void) {
-	uint8_t output_buffer[70];
-	uart_transmit_string(&huart1, (uint8_t*)"Inside Receiving RMC Data GSM\n");
-	osEvent evt = osMailGet(RMC_MailQGSMId, 90000); // Wait for mail
-	
-	if(evt.status == osEventMail){
-		uart_transmit_string(&huart1, (uint8_t*)"Received  RMC Data GSM\n");
-		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
-
-		rmc_jt.lcation.latitude = receivedData->lcation.latitude;
-		rmc_jt.lcation.longitude = receivedData->lcation.longitude;
-		rmc_jt.speed = receivedData->speed;
-		rmc_jt.course = receivedData->course;
-		rmc_jt.lcation.NS = receivedData->lcation.NS;
-		rmc_jt.lcation.EW = receivedData->lcation.EW;
-		rmc_jt.isValid = receivedData->isValid;
-			
-		uart_transmit_string(&huart1, (uint8_t*)"RMC Data  Saved GSM\n");
-		// Process received data (e.g., display, log, or store data)
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Location SENDING TO SERVER : %.6f %c, %.6f %c\n", rmc_jt.lcation.latitude, rmc_jt.lcation.NS, rmc_jt.lcation.longitude, rmc_jt.lcation.EW);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed SENDING TO SERVER: %.2f, Course: %.2f, Valid: %d\n", rmc_jt.speed, rmc_jt.course, rmc_jt.isValid);
-		uart_transmit_string(&huart1, output_buffer);
-
-		received_RMC = 1;
-		osMailFree(RMC_MailQGSMId, receivedData); // Free memory after use
-   }
-}
-
-void receiveRMCDataWithAddrGSM(){
-	uint8_t output_buffer[70];
-	uart_transmit_string(&huart1, (uint8_t*)"\\Inside Receiving Data at GSM\n\n");
-	osEvent evt = osMailGet(RMC_MailQGSMId, 5000); // Wait for mail
-	if(evt.status == osEventMail){
-		uart_transmit_string(&huart1, (uint8_t*)"\n\nReceived  ADDRESS Data at GSM: \n");
-		GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
-		char addr_out[10];
-		uart_transmit_string(&huart1, (uint8_t*)"Address received: \n");
-		sprintf(addr_out, "%08x\n\n", receivedData->address);
-		HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 8, 1000);
-		HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
-
-
-		rmc_jt.lcation.latitude = receivedData->rmc.lcation.latitude;
-		rmc_jt.lcation.longitude = receivedData->rmc.lcation.longitude;
-		rmc_jt.speed = receivedData->rmc.speed;
-		rmc_jt.course = receivedData->rmc.course;
-		rmc_jt.lcation.NS = receivedData->rmc.lcation.NS;
-		rmc_jt.lcation.EW = receivedData->rmc.lcation.EW;
-		rmc_jt.isValid = receivedData->rmc.isValid;
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Location SENDING TO SERVER : %.6f %c, %.6f %c\n", receivedData->rmc.lcation.latitude, receivedData->rmc.lcation.NS, receivedData->rmc.lcation.longitude, receivedData->rmc.lcation.EW);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed SENDING TO SERVER: %.2f, Course: %.2f, Valid: %d\n", receivedData->rmc.speed, receivedData->rmc.course, receivedData->rmc.isValid);
-		uart_transmit_string(&huart1, output_buffer);
-		osMailFree(RMC_MailQGSMId, receivedData);
-	}
-}
 
 void parseRMCString(uint8_t *str, RMCSTRUCT *rmc) {
     // Cast the uint8_t* to char* for string operations
@@ -1113,10 +1069,10 @@ void parseRMCString(uint8_t *str, RMCSTRUCT *rmc) {
     rmc->date.epoch = ((uint64_t)epoch0 << 32) | ((uint64_t)epoch1 << 16) | (uint64_t)epoch2;
 }
 
-void readFlash(uint32_t addr){
+RMCSTRUCT readFlash(uint32_t addr){
 	char addr_out[10];
-	uart_transmit_string(&huart1, (uint8_t*)"Address received: \n");
-	sprintf(addr_out, "%08x", (addr));
+	uart_transmit_string(&huart1, (uint8_t*)"Address received from FLASH: \n");
+	sprintf(addr_out, "%08lx", (addr));
 	HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 8, 1000);
 	HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 	W25_Reset();
@@ -1125,48 +1081,142 @@ void readFlash(uint32_t addr){
 	HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
 	HAL_UART_Transmit(&huart1, flashBufferMailReceived, sizeof(flashBufferMailReceived), 1000);
 
-	parseRMCString(flashBufferMailReceived, &rmc_jt);
+	RMCSTRUCT rmc;
+	parseRMCString(flashBufferMailReceived, &rmc);
 
-	Debug_printf("Date: %02d-%02d-%02d\n", rmc_jt.date.Yr, rmc_jt.date.Mon, rmc_jt.date.Day);
+	Debug_printf("Date: %02d-%02d-%02d\n", rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 
-	Debug_printf("Time: %02d:%02d:%02d\n", rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
+	Debug_printf("Time: %02d:%02d:%02d\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 
-	Debug_printf("Location: %.6f %c, %.6f %c\n", rmc_jt.lcation.latitude, rmc_jt.lcation.NS,
-		   rmc_jt.lcation.longitude, rmc_jt.lcation.EW);
+	Debug_printf("Location: %.6f %c, %.6f %c\n", rmc.lcation.latitude, rmc.lcation.NS,
+		   rmc.lcation.longitude, rmc.lcation.EW);
 
-	Debug_printf("Speed: %.2f\n", rmc_jt.speed);
+	Debug_printf("Speed: %.2f\n", rmc.speed);
 
-	Debug_printf("Course: %.2f\n", rmc_jt.course);
+	Debug_printf("Course: %.2f\n", rmc.course);
 
-	Debug_printf("Validity: %s\n", rmc_jt.isValid ? "Valid" : "Invalid");
+	Debug_printf("Validity: %s\n", rmc.isValid ? "Valid" : "Invalid");
+
+	return rmc;
 }
 
-void receiveAddrDataGSM(void) {
-	//uint8_t output_buffer[70];
-	static size_t i = 0;
-	int addr_idx = 0;
-	for(; i < 10; i++){
+void receiveRMCDataWithAddrGSM(){
+	uint8_t output_buffer[70];
+	GSM_MAIL_STRUCT *receivedData;
+	int is_exist_rmc = 0;
+	if(is_using_flash == 0){
 		uart_transmit_string(&huart1, (uint8_t*)"\\Inside Receiving Data at GSM\n\n");
-		osEvent evt = osMailGet(addr_MailQGSMId, 5000); // Wait for mail
+		osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
 		if(evt.status == osEventMail){
-			uart_transmit_string(&huart1, (uint8_t*)"Received  ADDRESS Data at GSM: \n");
-			uint32_t *receivedData = (uint32_t *)evt.value.p;
-			char addr_out[10];
-			uart_transmit_string(&huart1, (uint8_t*)"Address received: \n");
-			sprintf(addr_out, "%08x", (*receivedData));
-			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 8, 1000);
-			HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
-			if(i == 2){
-				addr_gsm[addr_idx] = *receivedData;
-				addr_idx++;
-				i = 0;
+			uart_transmit_string(&huart1, (uint8_t*)"\n\nReceived  ADDRESS Data at GSM: \n");
+			uart_transmit_string(&huart1, (uint8_t*)"Address received from MAIL QUEUE: \n");
+			receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
+			char addr_out[11];
+			sprintf(addr_out, "%08lx", receivedData->address);
+			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 10, 1000);
+			HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n\r\n", 1, 1000);
+
+			snprintf((char *)output_buffer, sizeof(output_buffer), "\n\nTime SENDING TO SERVER at GSM: %d:%d:%d\n", receivedData->rmc.tim.hour, receivedData->rmc.tim.min, receivedData->rmc.tim.sec);
+			uart_transmit_string(&huart1, output_buffer);
+
+			snprintf((char *)output_buffer, sizeof(output_buffer), "Date SENDING TO SERVER at GSM: %d/%d/%d\n", receivedData->rmc.date.Day, receivedData->rmc.date.Mon, receivedData->rmc.date.Yr);
+			uart_transmit_string(&huart1, output_buffer);
+			snprintf((char *)output_buffer, sizeof(output_buffer), "Location SENDING TO SERVER at GSM: %.6f %c, %.6f %c\n", receivedData->rmc.lcation.latitude, receivedData->rmc.lcation.NS, receivedData->rmc.lcation.longitude, receivedData->rmc.lcation.EW);
+			uart_transmit_string(&huart1, output_buffer);
+
+			snprintf((char *)output_buffer, sizeof(output_buffer),"Speed SENDING TO SERVER at GSM: %.2f, Course: %.2f, Valid: %d\n", receivedData->rmc.speed, receivedData->rmc.course, receivedData->rmc.isValid);
+			uart_transmit_string(&huart1, output_buffer);
+			osMailFree(RMC_MailQGSMId, receivedData);
+			Debug_printf("Saving data to variable to send to the server\n");
+			current_addr_gsm = receivedData->address;
+			is_exist_rmc = 1;
+			if(is_ready_to_send == 0 && mode == MAIL){
+				mode = STORAGE;
+				start_addr_not_ready = current_addr_gsm;
+				Debug_printf("Saving start address not ready to send: %08x\n",start_addr_not_ready);
 			}
-			osMailFree(addr_MailQGSMId, receivedData);
 		}
 		else{
 			Debug_printf("There is no address mail left\n");
-			break;
 		}
+	}
+	if(mode == MAIL){
+		Debug_printf("\n\n -------------Inside GETTING FROM MAIL mode------------\n\n");
+		if(is_exist_rmc){
+			rmc_jt.lcation.latitude = receivedData->rmc.lcation.latitude;
+			rmc_jt.lcation.longitude = receivedData->rmc.lcation.longitude;
+			rmc_jt.speed = receivedData->rmc.speed;
+			rmc_jt.course = receivedData->rmc.course;
+			rmc_jt.lcation.NS = receivedData->rmc.lcation.NS;
+			rmc_jt.lcation.EW = receivedData->rmc.lcation.EW;
+			rmc_jt.isValid = receivedData->rmc.isValid;
+			rmc_jt.date.Yr = receivedData->rmc.date.Yr;
+			rmc_jt.date.Mon = receivedData->rmc.date.Mon;
+			rmc_jt.date.Day = receivedData->rmc.date.Day;
+			rmc_jt.tim.hour = receivedData->rmc.tim.hour;
+			rmc_jt.tim.min = receivedData->rmc.tim.min;
+			rmc_jt.tim.sec = receivedData->rmc.tim.sec;
+			received_RMC = 1;
+			is_exist_rmc = 0;
+		}
+	}
+	else{
+		Debug_printf("\n\n -------------Inside GETTING FROM FLASH mode------------\n\n");
+		if(is_ready_to_send){
+			char addr_out[70];
+			sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", start_addr_disconnect);
+			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+			HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+			memset(addr_out, 0x00, 70);
+			sprintf(addr_out, "Current Address RECEIVED FROM MAIL QUEUE: %08lx", current_addr_gsm);
+			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+			HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+			if(is_in_sending)
+				rmc_jt = readFlash(start_addr_disconnect);
+			received_RMC = 1;
+		}
+		else{
+			if(current_addr_not_ready != 0){
+				char addr_out[128];
+				sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", current_addr_not_ready);
+				HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+				HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+				if(is_in_sending)
+					rmc_jt = readFlash(current_addr_not_ready);
+				received_RMC = 1;
+			}
+		}
+
+	}
+}
+
+int processUploadDataToServer(JT808_LocationInfoReport *location_info){
+	int result_send_location = send_location_to_server(0, location_info);
+
+	if(result_send_location){
+		uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Sending Location Report\r\n");
+		int result_check = check_data_sent_to_server(0);
+		if(result_check){
+			uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
+			receive_response("Check location report\n");
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 1;
+		}
+		else{
+			uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
+	}
+	else if(result_send_location == 2){
+		Debug_printf("The connection to server is closed. \n");
+		return 2;
+	}
+	else{
+		uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
+		return 0;
 	}
 }
 
@@ -1186,9 +1236,6 @@ void StartGSM(void const * argument)
 	osMailQDef(addr_MailQ, 11, uint32_t);
 	addr_MailQGSMId = osMailCreate(osMailQ(addr_MailQ), NULL);
 
-	Queue_GSM addr_queue;
-	initQueue_GSM(&addr_queue);
-
 //	size_t message_length;
 //	uint8_t *message_array = {0};
 //
@@ -1207,11 +1254,10 @@ void StartGSM(void const * argument)
 	for(;;)
 	{
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		osDelay(500);
+		osDelay(300);
 		switch(process){
 			//Wait for SIM module to start
-			case 0: 
-				//osDelay(2000);
+			case 0:
 				uart_transmit_string(&huart1, (uint8_t *)"First CHECK\r\n");
 				isReady = first_check_SIM();
 				if(isReady) process++;
@@ -1248,7 +1294,6 @@ void StartGSM(void const * argument)
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Configure PDP context\r\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
-				getCurrentTime();
 				configure_APN(1);
 				process++;
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
@@ -1259,6 +1304,7 @@ void StartGSM(void const * argument)
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Activate PDP context\r\n");
 				int receive_activate = activate_context(1);
 				if(receive_activate){
+					getCurrentTime();
 					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP context successfully\n");
 					osDelay(200);
 					process++;
@@ -1314,7 +1360,6 @@ void StartGSM(void const * argument)
 					process++;
 				}
 				else process = 8;
-				//free(message_array);
 				break;
 			case 6:
 				//CHECK LOGIN TO SERVER
@@ -1327,6 +1372,7 @@ void StartGSM(void const * argument)
 				else process = 8;
 				break;
 			case 7:
+				is_in_sending = 1;
 				//Send Location
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Send Location\r\n");
 				int result_get_current = getCurrentTime();
@@ -1334,63 +1380,122 @@ void StartGSM(void const * argument)
 					process++;
 					break;
 				}
-				int is_sent_error = 0;
-				while(!isEmpty_GSM(&addr_queue)){
-					uint32_t current_addr = peek_GSM(&addr_queue);
-					readFlash(current_addr);
-					save_rmc_to_location_info(&location_info);
-					uart_transmit_string(&huart1, (uint8_t *) "Location information info:\n");
-					uart_transmit_string(&huart1, &(location_info.start_mask));
-					uart_transmit_string(&huart1, location_info.message_type);
-					uart_transmit_string(&huart1, (uint8_t *) "\n");
-					int result_send_location = send_location_to_server(0, &location_info);
+				char addr_out[128];
+				end_addr_not_ready = current_addr_gsm;
+				sprintf(addr_out, "End Address to reading from FLASH: %08lx", end_addr_not_ready);
+				HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+				HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+				current_addr_not_ready = start_addr_not_ready;
+//				int inside_sending = 0;
+				while(1){
 
-					if(result_send_location == 1){
-						uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Sending Location Report\r\n");
-						int result_check = check_data_sent_to_server(0);
-						if(result_check){
+					if(is_ready_to_send == 0){
+						char addr_out[128];
+						sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", current_addr_not_ready);
+						HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+						HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+						if(current_addr_not_ready <= end_addr_not_ready){
+							is_using_flash = 1;
+							receiveRMCDataWithAddrGSM();
+							current_addr_not_ready += 128;
+						}
+						else{
+							is_ready_to_send = 1;
+							mode = MAIL;
+							is_using_flash = 0;
+
+							//receiveRMCDataWithAddrGSM();
+							Debug_printf("\n\n\n\n ------------------STARTING TO SEND THE CURRENT LOCATION DATA---------------- \n\n\n\n");
+						}
+					}
+					else
+						receiveRMCDataWithAddrGSM();
+					if(received_RMC == 1){
+						received_RMC = 0;
+						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
+
+						//get_RTC_time_date(&rmc_jt);
+						save_rmc_to_location_info(&location_info);
+						char addr_out[128];
+						if(is_ready_to_send == 1){
+							Debug_printf("Current stack address to be sent to the server: \n");
+							if(mode == MAIL)
+								sprintf(addr_out, "Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %08lx", current_addr_gsm);
+							else
+								sprintf(addr_out, "Address going to send to server at GSM:(STACK FROM FLASH MEMORY)  %08lx",  start_addr_disconnect);
+						}
+						else
+						{
+							sprintf(addr_out, "Stack address get when setting up GSM SIM module: %08lx", current_addr_not_ready);
+						}
+						HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+						HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+
+						int result_final = processUploadDataToServer(&location_info);
+						if(result_final == 1){
+							countReconnect = 0;
 							uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
 							receive_response("Check location report\n");
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
-							dequeue_GSM(&addr_queue);
-							is_sent_error = 0;
+							if(mode == STORAGE && is_ready_to_send == 1){
+								end_addr_disconnect = current_addr_gsm;
+								Debug_printf("End address of connection outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
+								if(start_addr_disconnect >= (end_addr_disconnect -128)){
+									Debug_printf("\n\n\n---------------Starting to get catch-up location data from MAIL QUEUE-------------\n\n\n\n");
+									mode = MAIL;
+									is_disconnect = 0;
+									is_using_flash = 0;
+								}
+								else{
+									is_using_flash = 1;
+									start_addr_disconnect += 128;
+								}
+							}
+						}
+						else if(result_final == 2){
+							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+							SIM_UART_ReInitializeRxDMA();
+							uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+							reboot_SIM_module();
+							process = 0;
+							break;
 						}
 						else{
 							uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
-							is_sent_error = 1;
+							if(is_disconnect == 0){
+								start_addr_disconnect = current_addr_gsm;
+								is_disconnect = 1;
+								is_using_flash = 0;
+								mode = STORAGE;
+								Debug_printf("Saving start address of connection outage: %08x\n", start_addr_disconnect);
+							}
+							process++;
 							break;
 						}
 					}
-					else if(result_send_location == 2){
-						close_connection(0);
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-						reboot_SIM_module();
-						process = 0;
-						break;
-					}
-					else{
-						uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
-						is_sent_error = 1;
-						break;
-					}
-					osDelay(300);
+					osDelay(200);
 				}
-				if(is_sent_error == 1){
-					process++;
-				}
-				osDelay(200);
+				is_in_sending = 0;
 				break;
+
 			case 8:
 				//Close CONNECTION
 				int result_close = close_connection(0);
 				if(result_close){
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
-					process = 4;
+					if(countReconnect < 10){
+						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+						SIM_UART_ReInitializeRxDMA();
+						uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
+						process = 4;
+					}
+					else{
+						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+						reboot_SIM_module();
+						process = 0;
+					}
 				}
 				else{
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
@@ -1401,40 +1506,12 @@ void StartGSM(void const * argument)
 				}
 				break;
 		}
-		receiveAddrDataGSM();
-//		if(received_RMC == 1){
-		uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
-//			countSendingDelay++;
-//			snprintf(output_elapsed, 128, "Sending Delay GSM GSM GSM: %d\n", countSendingDelay);
-//			uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
+		receiveRMCDataWithAddrGSM();
 
-//			if(countSendingDelay >= 1){
-//				//get_RTC_time_date(&rmc_jt);
-//				countSendingDelay = 0;
-
-		Debug_printf("\nStacked ADDRESS waiting to be sent to the server: \n");
-		for(size_t i = 0; i < 128; i++){
-			if(addr_gsm[i] != 0){
-				Debug_printf("Enqueue the Address GSM index %d to the queue:", i);
-				enqueue_GSM(&addr_queue, addr_gsm[i]);
-			}
-			else{
-				Debug_printf("There is no address left in the array");
-				memset(addr_gsm, 0, sizeof(addr_gsm));
-				break;
-			}
-		}
-
-		printQueue_GSM(&addr_queue);
-//			}
-//			received_RMC = 0;
-//			//osDelay(200);
-//		}
-		//HAL_UART_Transmit(&huart1, (uint8_t*) "Hello from GSM\n", strlen("Hello from GSM\n"), 1000);
 		Debug_printf("\nHello from GSM\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
-		osDelay(500);
+		osDelay(200);
   }
   /* USER CODE END StartGSM */
 }

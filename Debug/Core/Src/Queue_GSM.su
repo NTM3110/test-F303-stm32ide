@@ -1,7 +1,0 @@
-../Core/Src/Queue_GSM.c:18:6:initQueue_GSM	0	static
-../Core/Src/Queue_GSM.c:23:5:isEmpty_GSM	0	static
-../Core/Src/Queue_GSM.c:28:6:enqueue_GSM	16	static
-../Core/Src/Queue_GSM.c:49:10:dequeue_GSM	16	static
-../Core/Src/Queue_GSM.c:71:10:peek_GSM	8	static
-../Core/Src/Queue_GSM.c:81:6:clearQueue_GSM	8	static
-../Core/Src/Queue_GSM.c:88:5:printQueue_GSM	16	static

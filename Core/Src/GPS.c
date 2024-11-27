@@ -21,14 +21,52 @@ osMailQId RMC_MailQFLASHId; // Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
 #define GMT 		000
+#define NUM_POINTS 1000
 
 int isRMCExist = 0;
 int inx = 0;
 int hr=0,min=0,day=0,mon=0,yr=0;
 int daychange = 0;
 
-
 int getRMC_time = 0;
+
+typedef struct {
+    double latitude;
+    double longitude;
+} Coordinate;
+
+#define NUM_POINTS 1000
+
+// Key waypoints along the route
+Coordinate waypoints[] = {
+    {21.028511, 105.852002},  // Hồ Gươm
+    {21.030250, 105.852882},  // Hàng Dầu Intersection
+    {21.035165, 105.841769},  // Quán Thánh Street
+    {21.040338, 105.836815},  // Trấn Quốc Pagoda
+    {21.045032, 105.834977}   // Hồ Tây
+};
+
+// Generate interpolated route points
+void generateRoute(Coordinate *route) {
+    int numWaypoints = sizeof(waypoints) / sizeof(waypoints[0]);
+    int pointsPerSegment = NUM_POINTS / (numWaypoints - 1);
+    int idx = 0;
+
+    for (int i = 0; i < numWaypoints - 1; i++) {
+        Coordinate start = waypoints[i];
+        Coordinate end = waypoints[i + 1];
+
+        for (int j = 0; j < pointsPerSegment; j++) {
+            double t = (double)j / pointsPerSegment;
+            route[idx].latitude = start.latitude + t * (end.latitude - start.latitude);
+            route[idx].longitude = start.longitude + t * (end.longitude - start.longitude);
+            idx++;
+        }
+    }
+
+    // Ensure the last point is exactly the last waypoint
+    route[NUM_POINTS - 1] = waypoints[numWaypoints - 1];
+}
 
 void copy_array(uint8_t *des, uint8_t *src, int size){
 	for(size_t i = 0 ;i <  size; i++){
@@ -50,7 +88,6 @@ void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
 
 
 void display_rmc_data(UART_HandleTypeDef *huart) {
-    uint8_t output_buffer[50];
 
     Debug_printf("Time: %02d:%02d:%02d\r\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 
@@ -180,8 +217,8 @@ void getRMC(){
 	if(isRMCExist == 1){
 //		parse_rmc(rmc_str);
 //		display_rmc_data(&huart1);
-		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
-		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
+//		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
+//		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 		if(rmc.isValid == 1){
 			sendRMCDataToFlash(&rmc);
 			//sendRMCDataToGSM(&rmc);
@@ -198,13 +235,15 @@ void getRMC(){
 	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
 	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
 }
+
+
 void StartGPS(void const * argument)
 {
 	HAL_UART_Transmit(&huart1,(uint8_t*) "STARTING GPS", strlen("STARTING GPS"), 1000);
 	/* USER CODE BEGIN StartGPS */
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 //	/* Infinite loop */
-	rmc.tim.hour = 9;
+	rmc.tim.hour = 0;
 	rmc.tim.min = 0;
 	rmc.tim.sec = 0;
 	rmc.lcation.latitude = 20.998022;
@@ -214,23 +253,27 @@ void StartGPS(void const * argument)
 	rmc.lcation.NS = 'N';
 	rmc.lcation.EW = 'E';
 	rmc.isValid = 1;
-	rmc.date.Day = 23;
-	rmc.date.Mon = 11;
-	rmc.date.Yr = 24;
+	rmc.date.Day = 0;
+	rmc.date.Mon = 0;
+	rmc.date.Yr = 0;
 	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
+
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		HAL_Delay(1000);
+		HAL_Delay(1500);
 		getRMC();
-		rmc.lcation.latitude -= 0.00001;
+		//rmc.lcation.latitude -= 0.000001;
 //		rmc.tim.sec += 2;
+//		rmc.lcation.latitude = route[count].latitude;
+//		rmc.lcation.longitude = route[count].longitude;
+//		count++;
 		HAL_UART_Transmit(&huart1, (uint8_t *)"Getting GPS \n", strlen("Getting GPS \n"), 1000);
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n ");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_Delay(1000);
+		HAL_Delay(1500);
 	}
   /* USER CODE END StartGPS */
 }

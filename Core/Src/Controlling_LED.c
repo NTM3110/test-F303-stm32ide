@@ -76,7 +76,7 @@ void setUint32Array(uint32_t *array, size_t size, uint32_t value) {
     }
 }
 
-void receiveRMCDataWithAddrGSM(){
+void receiveRMCDataWithAddrLED(){
 	uint8_t output_buffer[70];
 	uart_transmit_string(&huart1, (uint8_t*)"\\Inside Receiving Data at GSM\n\n");
 	osEvent evt = osMailGet(RMC_MailQLEDId, 5000); // Wait for mail

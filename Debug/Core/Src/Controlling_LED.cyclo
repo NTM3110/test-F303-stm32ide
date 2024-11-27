@@ -3,5 +3,5 @@
 ../Core/Src/Controlling_LED.c:48:6:Blink_LED	1
 ../Core/Src/Controlling_LED.c:55:6:sendUint32Array	2
 ../Core/Src/Controlling_LED.c:71:6:setUint32Array	2
-../Core/Src/Controlling_LED.c:79:6:receiveRMCDataWithAddrGSM	2
-../Core/Src/Controlling_LED.c:121:6:StartControllingLED	1
+../Core/Src/Controlling_LED.c:79:6:receiveRMCDataWithAddrLED	2
+../Core/Src/Controlling_LED.c:119:6:StartControllingLED	1
