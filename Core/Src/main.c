@@ -199,7 +199,7 @@ int main(void)
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
   /* definition and creation of GSM */
-  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
+  osThreadDef(GSM, StartGSM, osPriorityNormal, 0, 1560);
   GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */

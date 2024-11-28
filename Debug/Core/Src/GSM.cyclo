@@ -40,4 +40,4 @@
 ../Core/Src/GSM.c:1072:11:readFlash	2
 ../Core/Src/GSM.c:1103:6:receiveRMCDataWithAddrGSM	10
 ../Core/Src/GSM.c:1193:5:processUploadDataToServer	3
-../Core/Src/GSM.c:1223:6:StartGSM	33
+../Core/Src/GSM.c:1223:6:StartGSM	34

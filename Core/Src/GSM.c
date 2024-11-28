@@ -878,7 +878,7 @@ int check_data_sent_to_server(int connect_id){
 	send_AT_command((char*)command);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
 		char output_elapsed[128];
-		if(count_check >= 5){
+		if(count_check >= 6){
 			count_check = 0;
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
@@ -1165,11 +1165,11 @@ void receiveRMCDataWithAddrGSM(){
 		if(is_ready_to_send){
 			char addr_out[70];
 			sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", start_addr_disconnect);
-			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 70, 1000);
 			HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 			memset(addr_out, 0x00, 70);
 			sprintf(addr_out, "Current Address RECEIVED FROM MAIL QUEUE: %08lx", current_addr_gsm);
-			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+			HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 70, 1000);
 			HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 			if(is_in_sending)
 				rmc_jt = readFlash(start_addr_disconnect);
@@ -1177,9 +1177,9 @@ void receiveRMCDataWithAddrGSM(){
 		}
 		else{
 			if(current_addr_not_ready != 0){
-				char addr_out[128];
+				char addr_out[70];
 				sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", current_addr_not_ready);
-				HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+				HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 70, 1000);
 				HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 				if(is_in_sending)
 					rmc_jt = readFlash(current_addr_not_ready);
@@ -1204,7 +1204,7 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 			return 1;
 		}
 		else{
-			uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
+			uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR  (CHECKING SENDING RESULT ERROR)\n");
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
@@ -1215,7 +1215,7 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 		return 2;
 	}
 	else{
-		uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
+		uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR (SENDING ERROR)\n");
 		return 0;
 	}
 }
@@ -1258,6 +1258,7 @@ void StartGSM(void const * argument)
 		switch(process){
 			//Wait for SIM module to start
 			case 0:
+				countReconnect = 0;
 				uart_transmit_string(&huart1, (uint8_t *)"First CHECK\r\n");
 				isReady = first_check_SIM();
 				if(isReady) process++;
@@ -1333,7 +1334,7 @@ void StartGSM(void const * argument)
 				if(received_res){
 					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server successfully\n");
 					check_socket_connection(1);
-					countReconnect++;
+					//countReconnect++;
 					process++;
 				}
 				else
@@ -1380,19 +1381,19 @@ void StartGSM(void const * argument)
 					process++;
 					break;
 				}
-				char addr_out[128];
+				char addr_out[70];
 				end_addr_not_ready = current_addr_gsm;
 				sprintf(addr_out, "End Address to reading from FLASH: %08lx", end_addr_not_ready);
-				HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+				HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 70, 1000);
 				HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 				current_addr_not_ready = start_addr_not_ready;
 //				int inside_sending = 0;
 				while(1){
 
 					if(is_ready_to_send == 0){
-						char addr_out[128];
+						char addr_out[70];
 						sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", current_addr_not_ready);
-						HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
+						HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 70, 1000);
 						HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 						if(current_addr_not_ready <= end_addr_not_ready){
 							is_using_flash = 1;
@@ -1410,6 +1411,10 @@ void StartGSM(void const * argument)
 					}
 					else
 						receiveRMCDataWithAddrGSM();
+					if(start_addr_disconnect == current_addr_gsm && is_disconnect == 0 && is_using_flash == 0){
+						received_RMC = 0;
+						Debug_printf("No update since the last address getting from FLASH. \n");
+					}
 					if(received_RMC == 1){
 						received_RMC = 0;
 						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
@@ -1439,12 +1444,12 @@ void StartGSM(void const * argument)
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
 							if(mode == STORAGE && is_ready_to_send == 1){
+								is_disconnect = 0;
 								end_addr_disconnect = current_addr_gsm;
 								Debug_printf("End address of connection outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
-								if(start_addr_disconnect >= (end_addr_disconnect -128)){
+								if(start_addr_disconnect >= (end_addr_disconnect)){
 									Debug_printf("\n\n\n---------------Starting to get catch-up location data from MAIL QUEUE-------------\n\n\n\n");
 									mode = MAIL;
-									is_disconnect = 0;
 									is_using_flash = 0;
 								}
 								else{
@@ -1485,17 +1490,10 @@ void StartGSM(void const * argument)
 				//Close CONNECTION
 				int result_close = close_connection(0);
 				if(result_close){
-					if(countReconnect < 10){
-						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-						SIM_UART_ReInitializeRxDMA();
-						uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
-						process = 4;
-					}
-					else{
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-						reboot_SIM_module();
-						process = 0;
-					}
+					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+					SIM_UART_ReInitializeRxDMA();
+					uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
+					process = 4;
 				}
 				else{
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
