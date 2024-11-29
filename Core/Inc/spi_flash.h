@@ -94,10 +94,6 @@ typedef struct GSM_MAIL_STRUCT{
 	uint32_t address;
 }GSM_MAIL_STRUCT;
 
-typedef struct {
-    uint8_t *data;   // Pointer to the uint8_t array
-    size_t length;   // Length of the array
-} UInt8Mail;
 
 int W25_ChipErase(void);
 
