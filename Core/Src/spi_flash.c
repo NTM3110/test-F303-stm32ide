@@ -10,6 +10,10 @@
 #include "GPS.h"
 #include "RTC.h"
 
+#define FLASH_START_ADDRESS 0x3000
+#define FLASH_END_ADDRESS   0x5000
+#define SECTOR_SIZE         0x1000 // Assuming sector size is 4 KB
+#define PAGE_SIZE           0x80
 
 extern UART_HandleTypeDef huart1;
 uint32_t address_tax = 0x1000;
