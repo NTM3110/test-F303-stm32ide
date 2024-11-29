@@ -1471,11 +1471,13 @@ void StartGSM(void const * argument)
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
 							if(is_disconnect == 0){
-								start_addr_disconnect = current_addr_gsm;
+								if(is_using_flash == 0){
+									start_addr_disconnect = current_addr_gsm;
+									Debug_printf("Saving start address of connection outage: %08x\n", start_addr_disconnect);
+								}
+								mode = STORAGE;
 								is_disconnect = 1;
 								is_using_flash = 0;
-								mode = STORAGE;
-								Debug_printf("Saving start address of connection outage: %08x\n", start_addr_disconnect);
 							}
 							process++;
 							break;
