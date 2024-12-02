@@ -183,7 +183,7 @@ void parse_rmc(uint8_t *rmc_sentence) {
 
 
 void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
-	HAL_UART_Transmit(&huart1, (uint8_t*) "SENDING RMC TO FLASH\n",  strlen("SENDING RMC\n") , HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart1, (uint8_t*) "\n\n -------------SENDING RMC TO FLASH------------\n\n",  strlen("SENDING RMC\n") , HAL_MAX_DELAY);
     RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQFLASHId, osWaitForever); // Allocate memory for mail
     if (mail != NULL) {
         *mail = *rmcData; // Copy data into allocated memory
@@ -257,9 +257,6 @@ void StartGPS(void const * argument)
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
 
-	rmc.date.Day = 2;
-	rmc.date.Mon = 12;
-	rmc.date.Yr = 24;
 	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 
@@ -270,11 +267,11 @@ void StartGPS(void const * argument)
 		HAL_Delay(500);
 		getRMC();
 		//rmc.lcation.latitude -= 0.000001;
-		rmc.tim.sec += 1;
-		if(rmc.tim.sec >= 57){
-			rmc.tim.sec = 0;
-			rmc.tim.min +=1;
-		}
+//		rmc.tim.sec += 1;
+//		if(rmc.tim.sec >= 57){
+//			rmc.tim.sec = 0;
+//			rmc.tim.min +=1;
+//		}
 		HAL_UART_Transmit(&huart1, (uint8_t *)"Getting GPS \n", strlen("Getting GPS \n"), 1000);
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n ");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);

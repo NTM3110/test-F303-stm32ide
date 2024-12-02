@@ -1287,6 +1287,7 @@ void StartGSM(void const * argument)
 				}
 				break;
 			case 1:
+				getCurrentTime();
 				// Check status of SIM. Wait until SIM is ready
 				uart_transmit_string(&huart1, (uint8_t *)"Check EVERYTHING READY\r\n");
 				osDelay(100);
@@ -1322,7 +1323,7 @@ void StartGSM(void const * argument)
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Activate PDP context\r\n");
 				int receive_activate = activate_context(1);
 				if(receive_activate){
-					getCurrentTime();
+					//getCurrentTime();
 					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP context successfully\n");
 					osDelay(200);
 					process++;
@@ -1406,7 +1407,6 @@ void StartGSM(void const * argument)
 				current_addr_not_ready = start_addr_not_ready;
 //				int inside_sending = 0;
 				while(1){
-
 					if(is_ready_to_send == 0){
 						char addr_out[70];
 						sprintf(addr_out, "Current Address going to send to server reading from FLASH: %08lx", current_addr_not_ready);
