@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ../Core/Src/spi_flash.c:50:9:W25_ReadStatusReg1	16	static
 ../Core/Src/spi_flash.c:62:5:W25_Busy	8	static
 ../Core/Src/spi_flash.c:67:5:W25_DelayWhileBusy	16	static
@@ -23,3 +24,30 @@
 ../Core/Src/spi_flash.c:488:6:sendAddresstoGSM	8	static
 ../Core/Src/spi_flash.c:498:6:receiveRMCDataFromGPS	144	static
 ../Core/Src/spi_flash.c:584:6:StartSpiFlash	48	static
+=======
+../Core/Src/spi_flash.c:53:9:W25_ReadStatusReg1	16	static
+../Core/Src/spi_flash.c:65:5:W25_Busy	8	static
+../Core/Src/spi_flash.c:70:5:W25_DelayWhileBusy	16	static
+../Core/Src/spi_flash.c:84:6:W25_Reset	8	static
+../Core/Src/spi_flash.c:93:5:W25_ReadJedecID	72	static
+../Core/Src/spi_flash.c:110:5:W25_ReadMD	24	static
+../Core/Src/spi_flash.c:123:5:W25_ReadUniqueID	24	static
+../Core/Src/spi_flash.c:138:5:W25_WriteEnable	16	static
+../Core/Src/spi_flash.c:41:5:W25_ChipErase	16	static
+../Core/Src/spi_flash.c:146:5:W25_SectorErase	16	static
+../Core/Src/spi_flash.c:158:5:W25_PageProgram	40	static
+../Core/Src/spi_flash.c:181:5:W25_ReadData	24	static
+../Core/Src/spi_flash.c:202:5:IsPageValid	8	static
+../Core/Src/spi_flash.c:228:6:UpdatePageAddress	16	static
+../Core/Src/spi_flash.c:234:5:W25_ShiftLeftFlashData	4320	static
+../Core/Src/spi_flash.c:322:5:W25_ShiftLeftEntireFlashBySector	40	static
+../Core/Src/spi_flash.c:394:6:receiveTaxData	80	static
+../Core/Src/spi_flash.c:443:10:calculate_epoch_time_utc	48	static
+../Core/Src/spi_flash.c:459:6:format_rmc_data	160	static
+../Core/Src/spi_flash.c:468:6:saveRMC	32	static
+../Core/Src/spi_flash.c:556:6:sendRMCDataToGSM	16	static
+../Core/Src/spi_flash.c:567:6:sendRMCDataWithAddrToGSM	16	static
+../Core/Src/spi_flash.c:579:6:sendAddresstoGSM	8	static
+../Core/Src/spi_flash.c:589:6:receiveRMCDataFromGPS	144	static
+../Core/Src/spi_flash.c:675:6:StartSpiFlash	48	static
+>>>>>>> 2522f85 (adding the shift left all FLASH by a sector)

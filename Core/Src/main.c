@@ -175,9 +175,9 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
-//  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-//
+  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
+  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
+
 //  /* definition and creation of ControllingLED */
 //  osThreadDef(ControllingLED, StartControllingLED, osPriorityIdle, 0, 128);
 //  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
@@ -187,7 +187,7 @@ int main(void)
 //  UART1Handle = osThreadCreate(osThread(UART1), NULL);
 
   /* definition and creation of SpiFlash */
-  osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1024);
+  osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1280);
   SpiFlashHandle = osThreadCreate(osThread(SpiFlash), NULL);
 
   /* definition and creation of GPS */
@@ -823,6 +823,7 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
+
 
 
 /**

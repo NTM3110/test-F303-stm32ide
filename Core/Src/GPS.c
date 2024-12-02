@@ -253,9 +253,15 @@ void StartGPS(void const * argument)
 	rmc.lcation.NS = 'N';
 	rmc.lcation.EW = 'E';
 	rmc.isValid = 1;
+<<<<<<< HEAD
 	rmc.date.Day = 0;
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
+=======
+	rmc.date.Day = 2;
+	rmc.date.Mon = 12;
+	rmc.date.Yr = 24;
+>>>>>>> 2522f85 (adding the shift left all FLASH by a sector)
 	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 
@@ -263,17 +269,25 @@ void StartGPS(void const * argument)
 	while(1)
 	{
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		HAL_Delay(1500);
+		HAL_Delay(500);
 		getRMC();
 		//rmc.lcation.latitude -= 0.000001;
+<<<<<<< HEAD
 //		rmc.tim.sec += 2;
+=======
+		rmc.tim.sec += 1;
+		if(rmc.tim.sec >= 57){
+			rmc.tim.sec = 0;
+			rmc.tim.min +=1;
+		}
+>>>>>>> 2522f85 (adding the shift left all FLASH by a sector)
 //		rmc.lcation.latitude = route[count].latitude;
 //		rmc.lcation.longitude = route[count].longitude;
 //		count++;
 		HAL_UART_Transmit(&huart1, (uint8_t *)"Getting GPS \n", strlen("Getting GPS \n"), 1000);
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n ");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_Delay(1500);
+		HAL_Delay(500);
 	}
   /* USER CODE END StartGPS */
 }
