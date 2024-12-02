@@ -15,8 +15,6 @@
 #define SECTOR_SIZE         0x1000 // Assuming sector size is 4 KB
 #define PAGE_SIZE           0x80
 
-//uint8_t sector_buffer[SECTOR_SIZE];
-//uint8_t next_page_buffer[PAGE_SIZE];
 uint8_t current_sector_buffer[SECTOR_SIZE];
 uint8_t previous_page_buffer[PAGE_SIZE];
 
@@ -230,19 +228,14 @@ void UpdatePageAddress(uint8_t *page, uint32_t new_address) {
     memcpy(page + strlen((char *)page) - 6, new_address_str, 6); // Overwrite last 6 characters
 }
 
-<<<<<<< HEAD
 int W25_ShiftLeftFlashDataByPage(uint32_t src_addr, uint32_t dest_addr) {
+	uint8_t sector_buffer[SECTOR_SIZE];
+	uint8_t next_page_buffer[PAGE_SIZE];
 	int loop_time = 0;
 	if(src_addr == 0x3000 && dest_addr == 0x3000){
 		loop_time = 1;
 	}
 	loop_time = (src_addr - dest_addr) / 128;
-=======
-int W25_ShiftLeftFlashData(void) {
-	uint8_t sector_buffer[SECTOR_SIZE];
-	uint8_t next_page_buffer[PAGE_SIZE];
-
->>>>>>> 2522f85 (adding the shift left all FLASH by a sector)
     uint32_t current_sector_start = FLASH_START_ADDRESS;
     for(size_t i = 0; i < loop_time; i++){
 		while (current_sector_start < FLASH_END_ADDRESS) {
@@ -328,8 +321,7 @@ int W25_ShiftLeftFlashData(void) {
     return HAL_OK;
 }
 
-<<<<<<< HEAD
-=======
+
 int W25_ShiftLeftEntireFlashBySector(uint32_t current_sector_start) {
 	Debug_printf("\nINSIDE SHIFT LEFT ENTIRE FLASH BY SECTOR\n");
     uint32_t previous_sector_start = current_sector_start - SECTOR_SIZE;
@@ -402,7 +394,6 @@ int W25_ShiftLeftEntireFlashBySector(uint32_t current_sector_start) {
 
 
 
->>>>>>> 2522f85 (adding the shift left all FLASH by a sector)
 void receiveTaxData(void) {
 //	uint8_t output_buffer[200];
 	int k = 0;
@@ -523,7 +514,6 @@ void saveRMC(){
 	}
 
 
-
 	if(address_rmc % 0x1000 == 0){
 		Debug_printf("Erase in advance:\n");
 		W25_Reset();
@@ -534,23 +524,7 @@ void saveRMC(){
 	uart_transmit_string(&huart1, (uint8_t*) "Buffer before saving to FLASH: ");
 	uart_transmit_string(&huart1, rmcBufferDemo);
 	current_addr = address_rmc;
-<<<<<<< HEAD
 	address_rmc+=128;
-	if(result_address % 0x1000 && result_address > 0){
-		Debug_printf("\n\nErasing SECTOR IN ADVANCE\n");
-		address_rmc -=  0x1000;
-		W25_ShiftLeftFlashDataByPage(result_address, result_address - 0x1000);
-		W25_SectorErase(result_address-0x1000);
-	}
-	if(current_addr >= 0x8F80){
-		//TODO: Reach end address so shift left all the address before result_address then if reach end address again. Shift left everytime get rmc again.
-
-		address_rmc = 0x3000;
-		W25_SectorErase(address_rmc);
-	}
-	HAL_Delay(1000);
-=======
-	address_rmc+= 128;
 	if(address_rmc % 0x1000 == 0x0000 && address_rmc >= 0x5000){
 		osDelay(1500);
 		W25_Reset();
@@ -587,7 +561,6 @@ void saveRMC(){
 //		address_rmc = 0x4F80;
 //	}
 	osDelay(1000);
->>>>>>> 2522f85 (adding the shift left all FLASH by a sector)
 	Debug_printf("\n");
 	memset(flashBufferRMCReceived, 0x00,128);
 }
