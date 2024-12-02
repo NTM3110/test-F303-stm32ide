@@ -15,9 +15,13 @@
 #define SECTOR_SIZE         0x1000 // Assuming sector size is 4 KB
 #define PAGE_SIZE           0x80
 
+uint8_t sector_buffer[SECTOR_SIZE];
+uint8_t next_page_buffer[PAGE_SIZE];
+
 extern UART_HandleTypeDef huart1;
 uint32_t address_tax = 0x1000;
 uint32_t address_rmc = 0x3000;
+
 
 uint32_t current_addr = 0x3000;
 int is_erased_tax = 0;
@@ -224,86 +228,92 @@ void UpdatePageAddress(uint8_t *page, uint32_t new_address) {
     memcpy(page + strlen((char *)page) - 6, new_address_str, 6); // Overwrite last 6 characters
 }
 
-int W25_ShiftLeftFlashData(void) {
+int W25_ShiftLeftFlashDataByPage(uint32_t src_addr, uint32_t dest_addr) {
+	int loop_time = 0;
+	if(src_addr == 0x3000 && dest_addr == 0x3000){
+		loop_time = 1;
+	}
+	loop_time = (src_addr - dest_addr) / 128;
     uint32_t current_sector_start = FLASH_START_ADDRESS;
+    for(size_t i = 0; i < loop_time; i++){
+		while (current_sector_start < FLASH_END_ADDRESS) {
+			uint32_t next_sector_start = current_sector_start + SECTOR_SIZE;
 
-    while (current_sector_start < FLASH_END_ADDRESS) {
-        uint32_t next_sector_start = current_sector_start + SECTOR_SIZE;
-
-        W25_Reset();
-        // Step 1: Read the entire current sector into the buffer
-        if (W25_ReadData(current_sector_start, sector_buffer, SECTOR_SIZE) != HAL_OK) {
-        	Debug_printf("READING ALL THE SECTOR: ERROR\n");
-            return HAL_ERROR; // Exit if read fails
-        }
-        else{
-        	char spi_flash_data_intro[] = "First page of Flash DATA at Reading All Sector: \n";
-			HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
-			HAL_UART_Transmit(&huart1, sector_buffer, 128, 1000);
-			Debug_printf("\n\n");
-        }
-
-        // Step 2: Read the first page of the next sector (if exists)
-        if (next_sector_start < FLASH_END_ADDRESS) {
-        	W25_Reset();
-            if (W25_ReadData(next_sector_start, next_page_buffer, PAGE_SIZE) != HAL_OK) {
-            	Debug_printf("READING FIRST PAGE OF THE NEXT SECTOR: ERROR\n");
-                return HAL_ERROR; // Exit if read fails
-            }
-            else{
-            	char spi_flash_data_intro[] = "First page of Flash DATA at reading NEXT SECTOR: \n";
+			W25_Reset();
+			// Step 1: Read the entire current sector into the buffer
+			if (W25_ReadData(current_sector_start, sector_buffer, SECTOR_SIZE) != HAL_OK) {
+				Debug_printf("READING ALL THE SECTOR: ERROR\n");
+				return HAL_ERROR; // Exit if read fails
+			}
+			else{
+				char spi_flash_data_intro[] = "First page of Flash DATA at Reading All Sector: \n";
 				HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
-				HAL_UART_Transmit(&huart1, next_page_buffer, 128, 1000);
+				HAL_UART_Transmit(&huart1, sector_buffer, 128, 1000);
 				Debug_printf("\n\n");
-            }
-        }
+			}
 
-        // Step 3: Shift the current sector's data left within the buffer
-        for (uint32_t offset = 0; offset < SECTOR_SIZE - PAGE_SIZE; offset += PAGE_SIZE) {
-            if (IsPageValid(sector_buffer + offset + PAGE_SIZE)) {
-            	Debug_printf("------VALID PAGE at %08lx-------\n", offset+PAGE_SIZE);
-            	char spi_flash_data_intro[] = "Valid Page Data: \n";
-				HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
-				HAL_UART_Transmit(&huart1, sector_buffer + offset+ PAGE_SIZE, 128, 1000);
-				Debug_printf("\n");
-                memcpy(sector_buffer + offset, sector_buffer + offset + PAGE_SIZE, PAGE_SIZE);
-                UpdatePageAddress(sector_buffer + offset, current_sector_start + offset);
-            } else {
-            	Debug_printf("-------INVALID PAGE at %08lx-------\n", offset+PAGE_SIZE);
-            	char spi_flash_data_intro[] = "Invalid Page Data: \n";
-				HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
-				HAL_UART_Transmit(&huart1, sector_buffer + offset +PAGE_SIZE, 128, 1000);
-				Debug_printf("\n");
-                memset(sector_buffer + offset, 0xFF, PAGE_SIZE); // Invalidate the page
-            }
-        }
+			// Step 2: Read the first page of the next sector (if exists)
+			if (next_sector_start < FLASH_END_ADDRESS) {
+				W25_Reset();
+				if (W25_ReadData(next_sector_start, next_page_buffer, PAGE_SIZE) != HAL_OK) {
+					Debug_printf("READING FIRST PAGE OF THE NEXT SECTOR: ERROR\n");
+					return HAL_ERROR; // Exit if read fails
+				}
+				else{
+					char spi_flash_data_intro[] = "First page of Flash DATA at reading NEXT SECTOR: \n";
+					HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
+					HAL_UART_Transmit(&huart1, next_page_buffer, 128, 1000);
+					Debug_printf("\n\n");
+				}
+			}
 
-        // Step 4: Move the next sector's first page into the last page of the current sector
-        if (next_sector_start < FLASH_END_ADDRESS && IsPageValid(next_page_buffer)) {
-            memcpy(sector_buffer + (SECTOR_SIZE - PAGE_SIZE), next_page_buffer, PAGE_SIZE);
-            UpdatePageAddress(sector_buffer + (SECTOR_SIZE - PAGE_SIZE), current_sector_start + (SECTOR_SIZE - PAGE_SIZE));
-        } else {
-           // memset(sector_buffer + (SECTOR_SIZE - PAGE_SIZE), 0xFF, PAGE_SIZE); // Invalidate the last page
-        }
+			// Step 3: Shift the current sector's data left within the buffer
+			for (uint32_t offset = 0; offset < SECTOR_SIZE - PAGE_SIZE; offset += PAGE_SIZE) {
+				if (IsPageValid(sector_buffer + offset + PAGE_SIZE)) {
+					Debug_printf("------VALID PAGE at %08lx-------\n", offset+PAGE_SIZE);
+					char spi_flash_data_intro[] = "Valid Page Data: \n";
+					HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
+					HAL_UART_Transmit(&huart1, sector_buffer + offset+ PAGE_SIZE, 128, 1000);
+					Debug_printf("\n");
+					memcpy(sector_buffer + offset, sector_buffer + offset + PAGE_SIZE, PAGE_SIZE);
+					UpdatePageAddress(sector_buffer + offset, current_sector_start + offset);
+				} else {
+					Debug_printf("-------INVALID PAGE at %08lx-------\n", offset+PAGE_SIZE);
+					char spi_flash_data_intro[] = "Invalid Page Data: \n";
+					HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
+					HAL_UART_Transmit(&huart1, sector_buffer + offset +PAGE_SIZE, 128, 1000);
+					Debug_printf("\n");
+					memset(sector_buffer + offset, 0xFF, PAGE_SIZE); // Invalidate the page
+				}
+			}
 
-        // Step 5: Erase the current sector
-        W25_Reset();
-        if (W25_SectorErase(current_sector_start) != HAL_OK) {
-        	Debug_printf("Erase ALL CURRENT SECTOR: ERROR\n");
-            return HAL_ERROR; // Exit if erase fails
-        }
+			// Step 4: Move the next sector's first page into the last page of the current sector
+			if (next_sector_start < FLASH_END_ADDRESS && IsPageValid(next_page_buffer)) {
+				memcpy(sector_buffer + (SECTOR_SIZE - PAGE_SIZE), next_page_buffer, PAGE_SIZE);
+				UpdatePageAddress(sector_buffer + (SECTOR_SIZE - PAGE_SIZE), current_sector_start + (SECTOR_SIZE - PAGE_SIZE));
+			} else {
+			   // memset(sector_buffer + (SECTOR_SIZE - PAGE_SIZE), 0xFF, PAGE_SIZE); // Invalidate the last page
+			}
 
-        // Step 6: Write the updated buffer back to the current sector
-        for (uint32_t offset = 0; offset < SECTOR_SIZE; offset += PAGE_SIZE) {
-        	W25_Reset();
-            if (W25_PageProgram(current_sector_start + offset, sector_buffer + offset, PAGE_SIZE) != HAL_OK) {
-            	Debug_printf("PAGE PROGRAM: ERROR at page offset %08lx\n", offset);
-                return HAL_ERROR; // Exit if write fails
-            }
-        }
+			// Step 5: Erase the current sector
+			W25_Reset();
+			if (W25_SectorErase(current_sector_start) != HAL_OK) {
+				Debug_printf("Erase ALL CURRENT SECTOR: ERROR\n");
+				return HAL_ERROR; // Exit if erase fails
+			}
 
-        // Move to the next sector
-        current_sector_start = next_sector_start;
+			// Step 6: Write the updated buffer back to the current sector
+			for (uint32_t offset = 0; offset < SECTOR_SIZE; offset += PAGE_SIZE) {
+				W25_Reset();
+				if (W25_PageProgram(current_sector_start + offset, sector_buffer + offset, PAGE_SIZE) != HAL_OK) {
+					Debug_printf("PAGE PROGRAM: ERROR at page offset %08lx\n", offset);
+					return HAL_ERROR; // Exit if write fails
+				}
+			}
+
+			// Move to the next sector
+			current_sector_start = next_sector_start;
+		}
     }
 
     return HAL_OK;
@@ -325,7 +335,7 @@ void receiveTaxData(void) {
 		}
 		osMailFree(tax_MailQId, receivedData); // Free memory after use
 		char addr_out[10];
-		sprintf(addr_out, "%08"PRIx32, address_tax);
+		sprintf(addr_out, "%08lx", address_tax);
 		HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 8, 1000);
 		HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 		k++;
@@ -358,6 +368,16 @@ void receiveTaxData(void) {
 	}
 }
 
+void receiveResultAddress(){
+	osEvent evt = osMailGet(result_MailQGSMId, 2000); // Wait for mail
+	if (evt.status == osEventMail) {
+		uint32_t *receivedData = (uint32_t *) evt.value.p;
+		result_address = *receivedData;
+		osMailFree(result_MailQGSMId, receivedData);
+		Debug_printf("\n\nThe result address received at SPI FLASH from GSM that the data in this ADDRESS has been sent successfully: %08lx\n\n", result_address);
+	}
+}
+
 uint32_t calculate_epoch_time_utc(DATE *date, TIME *time) {
     struct tm timeinfo;
     // Set up time structure
@@ -373,6 +393,8 @@ uint32_t calculate_epoch_time_utc(DATE *date, TIME *time) {
     time_t local_epoch = mktime(&timeinfo);
     return (uint32_t)(local_epoch + 25200); // Subtract timezone offset
 }
+
+
 
 void format_rmc_data(RMCSTRUCT *rmc_data, char *output_buffer, size_t buffer_size) {
 	//uart_transmit_string(&huart1, (uint8_t*) "Format RMC data");
@@ -423,11 +445,15 @@ void saveRMC(){
 	uart_transmit_string(&huart1, rmcBufferDemo);
 	current_addr = address_rmc;
 	address_rmc+=128;
-	if(address_rmc % 0x1000 == 0x0000){
+	if(result_address % 0x1000 && result_address > 0){
 		Debug_printf("\n\nErasing SECTOR IN ADVANCE\n");
-		W25_SectorErase(address_rmc);
+		address_rmc -=  0x1000;
+		W25_ShiftLeftFlashDataByPage(result_address, result_address - 0x1000);
+		W25_SectorErase(result_address-0x1000);
 	}
-	if(current_addr >= 0x89C0){
+	if(current_addr >= 0x8F80){
+		//TODO: Reach end address so shift left all the address before result_address then if reach end address again. Shift left everytime get rmc again.
+
 		address_rmc = 0x3000;
 		W25_SectorErase(address_rmc);
 	}
@@ -571,12 +597,14 @@ void StartSpiFlash(void const * argument)
 		W25_Reset();
 		W25_ReadJedecID();
 		W25_Reset();
+		receiveResultAddress();
 		W25_ReadData(current_addr, flashBufferRMCReceived, 128);
 		char spi_flash_data_intro[] = "Flash DATA received: ";
 		HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
 		HAL_UART_Transmit(&huart1, flashBufferRMCReceived, sizeof(flashBufferRMCReceived), 1000);
 		//receiveTaxData();
 		receiveRMCDataFromGPS();
+
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
 		osDelay(1500);
   }

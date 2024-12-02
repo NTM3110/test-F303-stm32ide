@@ -94,6 +94,8 @@ typedef struct GSM_MAIL_STRUCT{
 	uint32_t address;
 }GSM_MAIL_STRUCT;
 
+extern osMailQId result_MailQGSMId;
+extern volatile uint32_t result_address;
 
 int W25_ChipErase(void);
 

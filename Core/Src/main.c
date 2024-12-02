@@ -194,12 +194,12 @@ int main(void)
   osThreadDef(GPS, StartGPS, osPriorityIdle, 0, 640);
   GPSHandle = osThreadCreate(osThread(GPS), NULL);
 
-  /* definition and creation of RFID */
+//  /* definition and creation of RFID */
 //  osThreadDef(RFID, StartRFID, osPriorityIdle, 0, 128);
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
   /* definition and creation of GSM */
-  osThreadDef(GSM, StartGSM, osPriorityNormal, 0, 1560);
+  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
   GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */

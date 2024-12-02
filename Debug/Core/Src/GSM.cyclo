@@ -40,4 +40,5 @@
 ../Core/Src/GSM.c:1072:11:readFlash	2
 ../Core/Src/GSM.c:1103:6:receiveRMCDataWithAddrGSM	10
 ../Core/Src/GSM.c:1193:5:processUploadDataToServer	3
-../Core/Src/GSM.c:1223:6:StartGSM	35
+../Core/Src/GSM.c:1223:6:sendBackResultAddressToSPIFlash	4
+../Core/Src/GSM.c:1237:6:StartGSM	41
