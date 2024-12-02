@@ -521,7 +521,7 @@ void saveRMC(){
 	current_addr = address_rmc;
 	address_rmc+=128;
 	if(address_rmc % 0x1000 == 0x0000 && address_rmc >= 0x4000){
-		osDelay(500);
+		osDelay(1500);
 		W25_Reset();
 		W25_ReadData(address_rmc, flashBufferRMCReceived, 128);
 		Debug_printf("Current address data before shifting left:");

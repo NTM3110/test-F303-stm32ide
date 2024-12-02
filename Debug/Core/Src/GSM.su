@@ -41,4 +41,4 @@
 ../Core/Src/GSM.c:1103:6:receiveRMCDataWithAddrGSM	304	static
 ../Core/Src/GSM.c:1193:5:processUploadDataToServer	8	static
 ../Core/Src/GSM.c:1223:6:sendBackResultAddressToSPIFlash	8	static
-../Core/Src/GSM.c:1237:6:StartGSM	408	static
+../Core/Src/GSM.c:1232:6:StartGSM	408	static

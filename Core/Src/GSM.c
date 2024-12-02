@@ -1224,11 +1224,6 @@ void sendBackResultAddressToSPIFlash(){
 	HAL_UART_Transmit(&huart1, (uint8_t*) "\n\n\nSENDING RESULT ADDRESS\n\n",  strlen("\n\n\nSENDING RESULT ADDRESS \n\n") , HAL_MAX_DELAY);
 	uint32_t *mail = (uint32_t *)osMailAlloc(result_MailQGSMId, osWaitForever); // Allocate memory for mail
 	if (mail != NULL) {
-		if(is_disconnect == 1 || is_using_flash == 1){
-			result_address = start_addr_disconnect;
-		}
-		else
-			result_address = current_addr_gsm;
 		*mail = result_address; // Copy data into allocated memor
 		osMailPut(RMC_MailQLEDId, mail); // Put message in queuec
 	}
@@ -1460,7 +1455,6 @@ void StartGSM(void const * argument)
 							receive_response("Check location report\n");
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
-
 							if(mode == STORAGE && is_ready_to_send == 1){
 								is_disconnect = 0;
 								end_addr_disconnect = current_addr_gsm;
@@ -1487,6 +1481,7 @@ void StartGSM(void const * argument)
 									current_addr_gsm -= 128*32;
 								}
 							}
+							sendBackResultAddressToSPIFlash();
 						}
 						else if(result_final == 2){
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
