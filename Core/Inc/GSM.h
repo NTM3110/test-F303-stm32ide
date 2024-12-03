@@ -90,6 +90,10 @@ osMailQId RMC_MailQGSMId;
 osMailQId addr_MailQGSMId;
 
 uint32_t result_address;
+int is_flash_overflow = 0;
+volatile uint32_t start_addr_disconnect = 0;
+volatile uint32_t current_addr_gsm = 0;
+volatile uint32_t end_addr_disconnect = 0;
 
 void send_AT_command(const char *command);
 void receive_response(char *cmd_str);

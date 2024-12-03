@@ -95,6 +95,10 @@ typedef struct GSM_MAIL_STRUCT{
 }GSM_MAIL_STRUCT;
 
 extern uint32_t result_address;
+extern int is_flash_overflow;
+extern volatile uint32_t start_addr_disconnect;
+extern volatile uint32_t current_addr_gsm;
+extern volatile uint32_t end_addr_disconnect;
 
 int W25_ChipErase(void);
 

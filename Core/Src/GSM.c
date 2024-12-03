@@ -28,10 +28,8 @@ int is_ready_to_send = 0;
 int is_using_flash = 0;
 int is_in_sending = 0;
 
+
 int mode = MAIL;
-volatile uint32_t current_addr_gsm = 0;
-volatile uint32_t start_addr_disconnect = 0;
-volatile uint32_t end_addr_disconnect = 0;
 volatile uint32_t start_addr_not_ready = 0;
 volatile uint32_t end_addr_not_ready = 0;
 volatile uint32_t current_addr_not_ready = 0;
@@ -1448,6 +1446,7 @@ void StartGSM(void const * argument)
 								Debug_printf("\n-----DISCONNECT OR USING FLASH: RESULT ADDRESS ==== CURRENT ADDRESS GSM = %08lx----\n", result_address);
 								if(result_address % 0x1000 == 0x0000 && result_address > 0x3000){
 									start_addr_disconnect -= 128*32;
+									end_addr_disconnect -= 128*32;
 								}
 							}
 							else{
