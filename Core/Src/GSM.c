@@ -1443,6 +1443,21 @@ void StartGSM(void const * argument)
 							receive_response("Check location report\n");
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
+							if(is_disconnect == 1 || is_using_flash == 1){
+								result_address = start_addr_disconnect;
+								Debug_printf("\n-----DISCONNECT OR USING FLASH: RESULT ADDRESS ==== CURRENT ADDRESS GSM = %08lx----\n", result_address);
+								if(result_address % 0x1000 == 0x0000 && result_address > 0x3000){
+									start_addr_disconnect -= 128*32;
+								}
+							}
+							else{
+								result_address = current_addr_gsm;
+								Debug_printf("\n-----CONNECTING AND NOT USING FLASH: RESULT ADDRESS ==== CURRENT ADDRESS GSM = %08lx-----\n", result_address);
+								if(result_address % 0x1000 == 0x0000 && result_address > 0x3000){
+									current_addr_gsm -= 128*32;
+								}
+							}
+
 							if(mode == STORAGE && is_ready_to_send == 1){
 								is_disconnect = 0;
 								end_addr_disconnect = current_addr_gsm;

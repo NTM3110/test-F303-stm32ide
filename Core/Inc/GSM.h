@@ -89,6 +89,8 @@ extern TIM_HandleTypeDef htim3;
 osMailQId RMC_MailQGSMId;
 osMailQId addr_MailQGSMId;
 
+uint32_t result_address;
+
 void send_AT_command(const char *command);
 void receive_response(char *cmd_str);
 
