@@ -6,6 +6,8 @@
 #include "cmsis_os.h"// HAL header files, SPI and GPIO defines
 #include <time.h>
 
+#include "Queue_GSM.h"
+
 
 #define W25_CS_ENABLE()   HAL_GPIO_WritePin(SPI2_NCS_GPIO_Port, SPI2_NCS_Pin, GPIO_PIN_RESET)
 #define W25_CS_DISABLE()  HAL_GPIO_WritePin(SPI2_NCS_GPIO_Port, SPI2_NCS_Pin, GPIO_PIN_SET)
@@ -99,6 +101,10 @@ extern int is_flash_overflow;
 extern volatile uint32_t start_addr_disconnect;
 extern volatile uint32_t current_addr_gsm;
 extern volatile uint32_t end_addr_disconnect;
+extern int is_disconnect;
+extern int is_using_flash;
+extern Queue_GSM result_addr_queue;
+extern int mode;
 
 int W25_ChipErase(void);
 
@@ -116,6 +122,8 @@ int W25_SectorErase(uint32_t address);
 int W25_PageProgram(uint32_t address, uint8_t *buf, uint32_t count);
 
 int W25_ReadData(uint32_t address, uint8_t *buf, int bufSize);
+
+int checkSentToServer(uint32_t addr, Queue_GSM *queue);
 
 void receiveRMCData(void);
 

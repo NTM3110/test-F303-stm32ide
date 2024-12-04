@@ -52,7 +52,8 @@ Core/Src/RTC.o: ../Core/Src/RTC.c ../Core/Inc/RTC.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h \
- ../Core/Inc/system_management.h ../Core/Inc/spi_flash.h
+ ../Core/Inc/system_management.h ../Core/Inc/spi_flash.h \
+ ../Core/Inc/Queue_GSM.h
 ../Core/Inc/RTC.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/FreeRTOS.h:
@@ -110,3 +111,4 @@ Core/Src/RTC.o: ../Core/Src/RTC.c ../Core/Inc/RTC.h \
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h:
 ../Core/Inc/system_management.h:
 ../Core/Inc/spi_flash.h:
+../Core/Inc/Queue_GSM.h:

@@ -3,6 +3,7 @@
 
 #include "main.h"
 #include "RS232-UART1.h"
+#include "Queue_GSM.h"
 
 #define SIM_RESPONSE_MAX_SIZE						384
 #define SIM_GPIO_Port								GPIOC
@@ -90,6 +91,12 @@ osMailQId RMC_MailQGSMId;
 osMailQId addr_MailQGSMId;
 
 uint32_t result_address;
+Queue_GSM result_addr_queue;
+
+int is_disconnect = 0;
+int is_using_flash = 0;
+int mode = 0;
+
 int is_flash_overflow = 0;
 volatile uint32_t start_addr_disconnect = 0;
 volatile uint32_t current_addr_gsm = 0;
