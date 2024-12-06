@@ -824,8 +824,6 @@ void StartDefaultTask(void const * argument)
   /* USER CODE END 5 */
 }
 
-
-
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM2 interrupt took place, inside

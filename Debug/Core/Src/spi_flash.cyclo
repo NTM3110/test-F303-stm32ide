@@ -17,9 +17,9 @@
 ../Core/Src/spi_flash.c:374:10:calculate_epoch_time_utc	1
 ../Core/Src/spi_flash.c:390:6:format_rmc_data	1
 ../Core/Src/spi_flash.c:399:6:saveRMC	12
-../Core/Src/spi_flash.c:479:6:sendRMCDataWithAddrToGSM	3
-../Core/Src/spi_flash.c:490:6:parseRMCString	2
-../Core/Src/spi_flash.c:532:11:readFlash	2
-../Core/Src/spi_flash.c:563:5:checkSentToServer	3
-../Core/Src/spi_flash.c:577:6:receiveRMCDataFromGPS	9
-../Core/Src/spi_flash.c:665:6:StartSpiFlash	2
+../Core/Src/spi_flash.c:482:6:sendRMCDataWithAddrToGSM	3
+../Core/Src/spi_flash.c:493:6:parseRMCString	2
+../Core/Src/spi_flash.c:535:11:readFlash	2
+../Core/Src/spi_flash.c:566:5:checkSentToServer	3
+../Core/Src/spi_flash.c:580:6:receiveRMCDataFromGPS	9
+../Core/Src/spi_flash.c:670:6:StartSpiFlash	2

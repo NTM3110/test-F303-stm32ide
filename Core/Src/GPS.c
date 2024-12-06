@@ -221,7 +221,6 @@ void getRMC(){
 //		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 		if(rmc.isValid == 1){
 			sendRMCDataToFlash(&rmc);
-			//sendRMCDataToGSM(&rmc);
 			getRMC_time = 0;
 		}
 		isRMCExist = 0;
