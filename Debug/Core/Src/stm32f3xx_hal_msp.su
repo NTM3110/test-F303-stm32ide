@@ -5,7 +5,7 @@
 ../Core/Src/stm32f3xx_hal_msp.c:264:6:HAL_RTC_MspDeInit	0	static,ignoring_inline_asm
 ../Core/Src/stm32f3xx_hal_msp.c:286:6:HAL_SPI_MspInit	48	static
 ../Core/Src/stm32f3xx_hal_msp.c:348:6:HAL_SPI_MspDeInit	0	static
-../Core/Src/stm32f3xx_hal_msp.c:397:6:HAL_TIM_Base_MspInit	8	static
-../Core/Src/stm32f3xx_hal_msp.c:420:6:HAL_TIM_Base_MspDeInit	0	static
-../Core/Src/stm32f3xx_hal_msp.c:442:6:HAL_UART_MspInit	64	static
-../Core/Src/stm32f3xx_hal_msp.c:577:6:HAL_UART_MspDeInit	8	static
+../Core/Src/stm32f3xx_hal_msp.c:397:6:HAL_TIM_Base_MspInit	16	static
+../Core/Src/stm32f3xx_hal_msp.c:423:6:HAL_TIM_Base_MspDeInit	0	static
+../Core/Src/stm32f3xx_hal_msp.c:448:6:HAL_UART_MspInit	64	static
+../Core/Src/stm32f3xx_hal_msp.c:583:6:HAL_UART_MspDeInit	8	static

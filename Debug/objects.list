@@ -1,6 +1,7 @@
 "./Core/Src/Controlling_LED.o"
 "./Core/Src/GPS.o"
 "./Core/Src/GSM.o"
+"./Core/Src/Queue_GSM.o"
 "./Core/Src/RFID.o"
 "./Core/Src/RS232-UART1.o"
 "./Core/Src/RS232-UART2.o"

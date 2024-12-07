@@ -78,9 +78,9 @@ void sendTaxData(uint8_t *arrayData, uint32_t size) {
 }
 
 void Bill_Decode(){
-	for (uint16_t i = 0; i < READLOG_BLOCK_BUFFER_LENGHT; i++) 
+	for (uint16_t i = 0; i < READLOG_BLOCK_BUFFER_LENGHT-1; i++)
 	{
-		if (gsvSentence[i] == ')' & gsvSentence[i+1]==':' )
+		if ((gsvSentence[i] == ')') & (gsvSentence[i+1]==':'))
 		{
 			check++;
 		}	
@@ -90,11 +90,11 @@ void Bill_Decode(){
 		check=0;
 		for (uint16_t i = 0; i < READLOG_BLOCK_BUFFER_LENGHT; i++) 
 		{	
-			if (gsvSentence[i] == ':' & gsvSentence[i-1] == 'E')
+			if ( (gsvSentence[i] == ':') & (gsvSentence[i-1] == 'E') )
 			{
 					for (j=0; j < 10; j++)
 					{
-							if(gsvSentence[j+i+1] > 47 & gsvSentence[j+i+1] < 123)
+							if((gsvSentence[j+i+1] > 47) & (gsvSentence[j+i+1] < 123))
 							{	
 								k++;
 								taxBuffer[k]=gsvSentence[j+i+1];
@@ -105,11 +105,11 @@ void Bill_Decode(){
 							taxBuffer[k]=';';	
 							i=i+cnt;				
 			}
-			if (gsvSentence[i] == ':' & gsvSentence[i-1] == 'i')
+			if ((gsvSentence[i] == ':') & (gsvSentence[i-1] == 'i'))
 			{
 					for (j=0; j < 5; j++)
 					{
-							if((gsvSentence[j+i+1] > 47 & gsvSentence[j+i+1] < 58 ))
+							if((gsvSentence[j+i+1] > 47) & (gsvSentence[j+i+1] < 58 ))
 							{	
 								k++;
 								taxBuffer[k]=gsvSentence[j+i+1];
@@ -124,7 +124,7 @@ void Bill_Decode(){
 		
 		for (uint16_t i = 0; i < READLOG_BLOCK_BUFFER_LENGHT; i++) 
 		{
-			if (gsvSentence[i] == ')' & gsvSentence[i+1]==':' )
+			if ( (gsvSentence[i] == ')') & (gsvSentence[i+1]==':') )
 			{
 				check++;
 				if (check<=8)
@@ -133,7 +133,7 @@ void Bill_Decode(){
 					{
 						if(gsvSentence[j+i+2]!=0x0A)	
 						{	
-							if(  (gsvSentence[j+i+2] > 47 & gsvSentence[j+i+2] < 58) ||(gsvSentence[j+i+2] == 44 ) )
+							if( ( (gsvSentence[j+i+2] > 47) & (gsvSentence[j+i+2] < 58)) ||(gsvSentence[j+i+2] == 44 ) )
 							{	
 								k++;
 								taxBuffer[k]=gsvSentence[j+i+2];

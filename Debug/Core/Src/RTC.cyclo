@@ -1,0 +1,3 @@
+../Core/Src/RTC.c:19:6:set_time	2
+../Core/Src/RTC.c:33:6:set_date	2
+../Core/Src/RTC.c:45:6:get_RTC_time_date	1

@@ -1,1 +1,2 @@
-../Core/Src/system_management.c:4:6:uart_transmit_string	16	static
+../Core/Src/system_management.c:6:6:uart_transmit_string	16	static
+../Core/Src/system_management.c:11:6:Debug_printf	272	static

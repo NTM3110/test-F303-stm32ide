@@ -67,6 +67,7 @@ osThreadId SpiFlashHandle;
 osThreadId GPSHandle;
 osThreadId RFIDHandle;
 osThreadId GSMHandle;
+osSemaphoreId timerBinarySemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -155,6 +156,11 @@ int main(void)
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
+  /* Create the semaphores(s) */
+  /* definition and creation of timerBinarySem */
+  osSemaphoreDef(timerBinarySem);
+  timerBinarySemHandle = osSemaphoreCreate(osSemaphore(timerBinarySem), 1);
+
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -169,7 +175,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
+//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 //
 //  /* definition and creation of ControllingLED */
@@ -179,8 +185,6 @@ int main(void)
 //  /* definition and creation of UART1 */
 //  osThreadDef(UART1, StartUART1, osPriorityIdle, 0, 128);
 //  UART1Handle = osThreadCreate(osThread(UART1), NULL);
-  osThreadDef(GSM, StartGSM, osPriorityNormal, 0, 1688);
-  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* definition and creation of SpiFlash */
   osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1024);
@@ -195,7 +199,8 @@ int main(void)
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
   /* definition and creation of GSM */
-
+  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
+  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -205,17 +210,13 @@ int main(void)
   osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
-  HAL_TIM_Base_Start(&htim3); // Start the base timer
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-//	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-//	 Delay_1s();
-//
-//	 HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-//	 Delay_1s();
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -822,7 +823,6 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode
