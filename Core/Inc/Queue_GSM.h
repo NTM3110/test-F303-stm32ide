@@ -30,5 +30,6 @@ uint32_t dequeue_GSM(Queue_GSM* q);
 uint32_t peek_GSM(Queue_GSM* q);
 void clearQueue_GSM(Queue_GSM* q);
 int printQueue_GSM(Queue_GSM* q);
+int checkAddrExistInQueue(uint32_t addr, Queue_GSM *queue);
 
 #endif /* INC_QUEUE_H_ */

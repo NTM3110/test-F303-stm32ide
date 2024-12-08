@@ -102,3 +102,20 @@ int printQueue_GSM(Queue_GSM* q) {
     Debug_printf("\n");
     return idx;
 }
+
+int checkAddrExistInQueue(uint32_t addr, Queue_GSM *queue){
+	Node* temp = queue->front;
+	int idx =0;
+//	Debug_printf("Queue_GSM contents: \n");
+	while (temp != NULL) {
+//		Debug_printf("Index %d: %08x\n",idx, (temp->data));
+		if(temp->data == addr){
+			Debug_printf("FOUND ADDRESS: %08lx\n", addr);
+			return 1;
+		}
+		idx++;
+		temp = temp->next;
+	}
+	Debug_printf("NOT FOUND ADDRESS: %08lx\n", addr);
+	 return 0;
+}

@@ -9,8 +9,8 @@ extern ADC_HandleTypeDef hadc3;
 
 void Blink_LED(GPIO_TypeDef* GPIOx, uint16_t GPIO_PIN);
 
-osMailQId RMC_MailQLEDId;
-osMailQId uint8MailQueue;
+//osMailQId RMC_MailQLEDId;
+//osMailQId uint8MailQueue;
 
 #endif
 

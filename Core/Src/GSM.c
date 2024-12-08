@@ -10,6 +10,7 @@
 #include "RTC.h"
 #include "spi_flash.h"
 #include "system_management.h"
+#include "Queue_GSM.h"
 
 enum MODE{
 	MAIL,
@@ -17,7 +18,6 @@ enum MODE{
 };
 
 uint8_t TERMINAL_REGISTRATION[128];
-
 uint8_t response[SIM_RESPONSE_MAX_SIZE];
 RingBufferDmaU8_TypeDef SIMRxDMARing;
 int is_activated = 0;
@@ -30,7 +30,7 @@ volatile uint32_t start_addr_not_ready = 0;
 volatile uint32_t end_addr_not_ready = 0;
 volatile uint32_t current_addr_not_ready = 0;
 
-int is_40s = 0;
+//int is_40s = 0;
 RMCSTRUCT rmc_jt;
 uint8_t terminal_phone_number[6] = {0};
 
@@ -536,17 +536,17 @@ void check_activate_context(){
 	receive_response("CHECK Activate CONTEXT\n");
 }
 
-void Delay_40s(void)
-{
-	for(int i = 0; i < 40; i++){
-    // Reset the timer counter to 0
-		__HAL_TIM_SET_COUNTER(&htim3, 0);
-
-		// Wait until the counter reaches 1000
-		while (__HAL_TIM_GET_COUNTER(&htim3) < 1000);
-	}
-	is_40s = 1;
-}
+//void Delay_40s(void)
+//{
+//	for(int i = 0; i < 40; i++){
+//    // Reset the timer counter to 0
+//		__HAL_TIM_SET_COUNTER(&htim3, 0);
+//
+//		// Wait until the counter reaches 1000
+//		while (__HAL_TIM_GET_COUNTER(&htim3) < 1000);
+//	}
+//	is_40s = 1;
+//}
 int activate_context(int context_id){
 	uint8_t command[128];
 	snprintf((char *)command, sizeof(command), "AT+QIACT=%d\r\n", context_id);
@@ -1034,6 +1034,13 @@ int getCurrentTime(){
 	else return 0;
 }
 
+int checkAddrExistInArr(uint8_t addr, uint8_t *addr_arr){
+	for(size_t i = 0 ; i < 128; i++){
+		if(addr_arr[i] == addr) return 1;
+	}
+	return 0;
+}
+
 void receiveRMCDataWithAddrGSM(){
 	uint8_t output_buffer[70];
 	uart_transmit_string(&huart1, (uint8_t*)"\\Inside Receiving Data at GSM\n\n");
@@ -1043,7 +1050,7 @@ void receiveRMCDataWithAddrGSM(){
 		uart_transmit_string(&huart1, (uint8_t*)"Address received from MAIL QUEUE: \n");
 		GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
 		current_addr_gsm = receivedData->address;
-		if(checkSentToServer(current_addr_gsm,&result_addr_queue) == 0){
+		if(checkAddrExistInQueue(current_addr_gsm,&result_addr_queue) == 0 && (checkAddrExistInQueue(current_addr_gsm, &mail_sent_queue) == 1 || is_using_flash == 0)){
 //			current_addr_gsm = receivedData->address;
 			Debug_printf("Saving data to variable to send to the server\n");
 			Debug_printf("\n---------- Current data accepted at address: %08lx----------\n", current_addr_gsm);
@@ -1132,6 +1139,7 @@ void StartGSM(void const * argument)
 	addr_MailQGSMId = osMailCreate(osMailQ(addr_MailQ), NULL);
 
 	initQueue_GSM(&result_addr_queue);
+	initQueue_GSM(&mail_sent_queue);
 //	size_t message_length;
 //	uint8_t *message_array = {0};
 //
@@ -1311,12 +1319,15 @@ void StartGSM(void const * argument)
 								}
 								Debug_printf("\n-----------ADDING current address to the result queue----------\n");
 								enqueue_GSM(&result_addr_queue, current_addr_gsm);
+
+								Debug_printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
 								printQueue_GSM(&result_addr_queue);
 
 								if(start_addr_disconnect >= end_addr_disconnect){
 									Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
 									is_using_flash = 0;
 									clearQueue_GSM(&result_addr_queue);
+									clearQueue_GSM(&mail_sent_queue);
 									start_addr_disconnect = 0;
 									end_addr_disconnect = 0;
 								}

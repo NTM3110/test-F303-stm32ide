@@ -5,3 +5,4 @@
 ../Core/Src/Queue_GSM.c:71:10:peek_GSM	2
 ../Core/Src/Queue_GSM.c:81:6:clearQueue_GSM	2
 ../Core/Src/Queue_GSM.c:88:5:printQueue_GSM	3
+../Core/Src/Queue_GSM.c:106:5:checkAddrExistInQueue	3

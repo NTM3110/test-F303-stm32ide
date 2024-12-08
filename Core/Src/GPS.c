@@ -21,7 +21,6 @@ osMailQId RMC_MailQFLASHId; // Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
 #define GMT 		000
-#define NUM_POINTS 1000
 
 int isRMCExist = 0;
 int inx = 0;
@@ -30,43 +29,7 @@ int daychange = 0;
 
 int getRMC_time = 0;
 
-typedef struct {
-    double latitude;
-    double longitude;
-} Coordinate;
 
-#define NUM_POINTS 1000
-
-// Key waypoints along the route
-Coordinate waypoints[] = {
-    {21.028511, 105.852002},  // Hồ Gươm
-    {21.030250, 105.852882},  // Hàng Dầu Intersection
-    {21.035165, 105.841769},  // Quán Thánh Street
-    {21.040338, 105.836815},  // Trấn Quốc Pagoda
-    {21.045032, 105.834977}   // Hồ Tây
-};
-
-// Generate interpolated route points
-void generateRoute(Coordinate *route) {
-    int numWaypoints = sizeof(waypoints) / sizeof(waypoints[0]);
-    int pointsPerSegment = NUM_POINTS / (numWaypoints - 1);
-    int idx = 0;
-
-    for (int i = 0; i < numWaypoints - 1; i++) {
-        Coordinate start = waypoints[i];
-        Coordinate end = waypoints[i + 1];
-
-        for (int j = 0; j < pointsPerSegment; j++) {
-            double t = (double)j / pointsPerSegment;
-            route[idx].latitude = start.latitude + t * (end.latitude - start.latitude);
-            route[idx].longitude = start.longitude + t * (end.longitude - start.longitude);
-            idx++;
-        }
-    }
-
-    // Ensure the last point is exactly the last waypoint
-    route[NUM_POINTS - 1] = waypoints[numWaypoints - 1];
-}
 
 void copy_array(uint8_t *des, uint8_t *src, int size){
 	for(size_t i = 0 ;i <  size; i++){
@@ -255,7 +218,7 @@ void StartGPS(void const * argument)
 	rmc.date.Day = 0;
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
-	osMailQDef(FLASH_MailQ, 11, RMCSTRUCT);
+	osMailQDef(FLASH_MailQ, 5, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
