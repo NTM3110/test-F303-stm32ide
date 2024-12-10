@@ -1,4 +1,4 @@
-Core/Src/Queue_GSM.o: ../Core/Src/Queue_GSM.c ../Core/Inc/Queue_GSM.h \
+Core/Src/Queue_GSM.o: ../Core/Src/Queue_GSM.c \
  ../Core/Inc/system_management.h ../Core/Inc/main.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h \
  ../Core/Inc/stm32f3xx_hal_conf.h \
@@ -35,8 +35,8 @@ Core/Src/Queue_GSM.o: ../Core/Src/Queue_GSM.c ../Core/Inc/Queue_GSM.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h \
  ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h \
- ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h
-../Core/Inc/Queue_GSM.h:
+ ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h \
+ ../Core/Inc/Queue_GSM.h
 ../Core/Inc/system_management.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
@@ -75,3 +75,4 @@ Core/Src/Queue_GSM.o: ../Core/Src/Queue_GSM.c ../Core/Inc/Queue_GSM.h \
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_tim_ex.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal_uart_ex.h:
+../Core/Inc/Queue_GSM.h:

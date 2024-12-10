@@ -17,6 +17,7 @@
 "./Core/Src/system_management.o"
 "./Core/Src/system_stm32f3xx.o"
 "./Core/Startup/startup_stm32f303rctx.o"
+"./Core/ThreadSafe/newlib_lock_glue.o"
 "./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal.o"
 "./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc.o"
 "./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc_ex.o"

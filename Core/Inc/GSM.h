@@ -92,7 +92,7 @@ osMailQId addr_MailQGSMId;
 
 uint32_t result_address;
 Queue_GSM result_addr_queue;
-Queue_GSM mail_sent_queue;
+//Queue_GSM mail_sent_queue;
 
 int is_disconnect = 0;
 int is_using_flash = 0;

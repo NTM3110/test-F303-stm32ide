@@ -105,6 +105,7 @@ extern int is_disconnect;
 extern int is_using_flash;
 extern Queue_GSM result_addr_queue;
 extern Queue_GSM mail_sent_queue;
+
 extern int mode;
 
 int W25_ChipErase(void);
