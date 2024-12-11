@@ -1370,7 +1370,7 @@ void StartGSM(void const * argument)
 								//Delete all the address that has been getting from FLASH.
 								for (int i = 0; i < result_addr_queue.size; i++) {
 									int idx = (result_addr_queue.front + i) % MAX_SIZE;
-									if(result_addr_queue.data[idx] != 0x3F00){
+									if(result_addr_queue.data[idx] != FLASH_END_ADDRESS-0x100){
 
 //										result_addr_queue.data[idx] -= 128 * count_shiftleft;
 										deleteMiddle_GSM(&result_addr_queue, idx);
@@ -1380,7 +1380,7 @@ void StartGSM(void const * argument)
 								int count_shiftleft_dub = count_shiftleft;
 								for (int i = 0; i < result_addr_queue.size; i++) {
 									int idx = (result_addr_queue.front + i) % MAX_SIZE;
-									if(result_addr_queue.data[idx] == 0x3F00){
+									if(result_addr_queue.data[idx] == FLASH_END_ADDRESS-0x100){
 										result_addr_queue.data[idx] -= 128 * count_shiftleft_dub;
 										count_shiftleft_dub -= 1;
 									}

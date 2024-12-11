@@ -579,7 +579,7 @@ Discarded input sections
  .debug_macro   0x00000000       0x35 ./Core/Src/GSM.o
  .debug_macro   0x00000000       0x22 ./Core/Src/GSM.o
  .debug_macro   0x00000000       0x10 ./Core/Src/GSM.o
- .debug_macro   0x00000000       0xbe ./Core/Src/GSM.o
+ .debug_macro   0x00000000       0xd6 ./Core/Src/GSM.o
  .debug_macro   0x00000000       0x4c ./Core/Src/GSM.o
  .group         0x00000000        0xc ./Core/Src/Queue_GSM.o
  .group         0x00000000        0xc ./Core/Src/Queue_GSM.o
@@ -1411,7 +1411,7 @@ Discarded input sections
  .debug_macro   0x00000000       0x3d ./Core/Src/RTC.o
  .debug_macro   0x00000000       0x35 ./Core/Src/RTC.o
  .debug_macro   0x00000000       0x10 ./Core/Src/RTC.o
- .debug_macro   0x00000000       0xbe ./Core/Src/RTC.o
+ .debug_macro   0x00000000       0xd6 ./Core/Src/RTC.o
  .group         0x00000000        0xc ./Core/Src/freertos.o
  .group         0x00000000        0xc ./Core/Src/freertos.o
  .group         0x00000000        0xc ./Core/Src/freertos.o
@@ -1875,7 +1875,7 @@ Discarded input sections
  .debug_macro   0x00000000       0x3d ./Core/Src/spi_flash.o
  .debug_macro   0x00000000       0x35 ./Core/Src/spi_flash.o
  .debug_macro   0x00000000       0x10 ./Core/Src/spi_flash.o
- .debug_macro   0x00000000       0xbe ./Core/Src/spi_flash.o
+ .debug_macro   0x00000000       0xd6 ./Core/Src/spi_flash.o
  .debug_macro   0x00000000       0x1c ./Core/Src/spi_flash.o
  .debug_macro   0x00000000       0x10 ./Core/Src/spi_flash.o
  .debug_macro   0x00000000       0x10 ./Core/Src/spi_flash.o
@@ -10085,28 +10085,28 @@ LOAD C:/ST/STM32CubeIDE_1.16.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.ext
  .debug_macro   0x0001e12e      0x19b ./Core/Src/GPS.o
  .debug_macro   0x0001e2c9       0x4c ./Core/Src/GPS.o
  .debug_macro   0x0001e315       0x10 ./Core/Src/GPS.o
- .debug_macro   0x0001e325       0xbe ./Core/Src/GPS.o
- .debug_macro   0x0001e3e3      0x532 ./Core/Src/GSM.o
- .debug_macro   0x0001e915       0x5b ./Core/Src/GSM.o
- .debug_macro   0x0001e970       0x94 ./Core/Src/GSM.o
- .debug_macro   0x0001ea04       0x57 ./Core/Src/GSM.o
- .debug_macro   0x0001ea5b       0x10 ./Core/Src/GSM.o
- .debug_macro   0x0001ea6b       0xd6 ./Core/Src/GSM.o
- .debug_macro   0x0001eb41       0x1c ./Core/Src/GSM.o
- .debug_macro   0x0001eb5d       0x4f ./Core/Src/GSM.o
- .debug_macro   0x0001ebac       0x16 ./Core/Src/GSM.o
- .debug_macro   0x0001ebc2       0xc1 ./Core/Src/GSM.o
- .debug_macro   0x0001ec83       0x9a ./Core/Src/GSM.o
- .debug_macro   0x0001ed1d      0x34a ./Core/Src/Queue_GSM.o
- .debug_macro   0x0001f067       0x16 ./Core/Src/Queue_GSM.o
- .debug_macro   0x0001f07d       0x9e ./Core/Src/Queue_GSM.o
- .debug_macro   0x0001f11b      0x10b ./Core/Src/Queue_GSM.o
- .debug_macro   0x0001f226       0x16 ./Core/Src/Queue_GSM.o
- .debug_macro   0x0001f23c      0x434 ./Core/Src/RS232-UART1.o
- .debug_macro   0x0001f670      0x502 ./Core/Src/RTC.o
- .debug_macro   0x0001fb72      0x290 ./Core/Src/freertos.o
- .debug_macro   0x0001fe02      0x2db ./Core/Src/main.o
- .debug_macro   0x000200dd      0x555 ./Core/Src/spi_flash.o
+ .debug_macro   0x0001e325       0xd6 ./Core/Src/GPS.o
+ .debug_macro   0x0001e3fb      0x532 ./Core/Src/GSM.o
+ .debug_macro   0x0001e92d       0x5b ./Core/Src/GSM.o
+ .debug_macro   0x0001e988       0x94 ./Core/Src/GSM.o
+ .debug_macro   0x0001ea1c       0x57 ./Core/Src/GSM.o
+ .debug_macro   0x0001ea73       0x10 ./Core/Src/GSM.o
+ .debug_macro   0x0001ea83       0xd6 ./Core/Src/GSM.o
+ .debug_macro   0x0001eb59       0x1c ./Core/Src/GSM.o
+ .debug_macro   0x0001eb75       0x4f ./Core/Src/GSM.o
+ .debug_macro   0x0001ebc4       0x16 ./Core/Src/GSM.o
+ .debug_macro   0x0001ebda       0xc1 ./Core/Src/GSM.o
+ .debug_macro   0x0001ec9b       0x9a ./Core/Src/GSM.o
+ .debug_macro   0x0001ed35      0x34a ./Core/Src/Queue_GSM.o
+ .debug_macro   0x0001f07f       0x16 ./Core/Src/Queue_GSM.o
+ .debug_macro   0x0001f095       0x9e ./Core/Src/Queue_GSM.o
+ .debug_macro   0x0001f133      0x10b ./Core/Src/Queue_GSM.o
+ .debug_macro   0x0001f23e       0x16 ./Core/Src/Queue_GSM.o
+ .debug_macro   0x0001f254      0x434 ./Core/Src/RS232-UART1.o
+ .debug_macro   0x0001f688      0x502 ./Core/Src/RTC.o
+ .debug_macro   0x0001fb8a      0x290 ./Core/Src/freertos.o
+ .debug_macro   0x0001fe1a      0x2db ./Core/Src/main.o
+ .debug_macro   0x000200f5      0x53d ./Core/Src/spi_flash.o
  .debug_macro   0x00020632       0x10 ./Core/Src/spi_flash.o
  .debug_macro   0x00020642      0x460 ./Core/Src/spi_flash.o
  .debug_macro   0x00020aa2       0x10 ./Core/Src/spi_flash.o
@@ -10152,61 +10152,61 @@ LOAD C:/ST/STM32CubeIDE_1.16.1/STM32CubeIDE/plugins/com.st.stm32cube.ide.mcu.ext
  .debug_macro   0x00024cf3      0x196 ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.o
  .debug_macro   0x00024e89      0x1ae ./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o
 
-.debug_line     0x00000000    0x2f65b
+.debug_line     0x00000000    0x2f65d
  .debug_line    0x00000000     0x1121 ./Core/Src/GPS.o
- .debug_line    0x00001121     0x2483 ./Core/Src/GSM.o
- .debug_line    0x000035a4      0xd13 ./Core/Src/Queue_GSM.o
- .debug_line    0x000042b7      0xf65 ./Core/Src/RS232-UART1.o
- .debug_line    0x0000521c      0xd13 ./Core/Src/RTC.o
- .debug_line    0x00005f2f      0x919 ./Core/Src/freertos.o
- .debug_line    0x00006848     0x12fe ./Core/Src/main.o
- .debug_line    0x00007b46     0x192c ./Core/Src/spi_flash.o
- .debug_line    0x00009472      0xd14 ./Core/Src/stm32f3xx_hal_msp.o
- .debug_line    0x0000a186      0x90b ./Core/Src/stm32f3xx_hal_timebase_tim.o
- .debug_line    0x0000aa91      0x977 ./Core/Src/stm32f3xx_it.o
- .debug_line    0x0000b408      0x96a ./Core/Src/syscalls.o
- .debug_line    0x0000bd72      0x5ad ./Core/Src/sysmem.o
- .debug_line    0x0000c31f      0x9f4 ./Core/Src/system_management.o
- .debug_line    0x0000cd13      0x89a ./Core/Src/system_stm32f3xx.o
- .debug_line    0x0000d5ad       0x7a ./Core/Startup/startup_stm32f303rctx.o
- .debug_line    0x0000d627      0xbb3 ./Core/ThreadSafe/newlib_lock_glue.o
- .debug_line    0x0000e1da      0xb50 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal.o
- .debug_line    0x0000ed2a      0x9ea ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc.o
- .debug_line    0x0000f714     0x2ef7 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc_ex.o
- .debug_line    0x0001260b      0xdec ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_cortex.o
- .debug_line    0x000133f7      0xfae ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_dma.o
- .debug_line    0x000143a5      0xd53 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_gpio.o
- .debug_line    0x000150f8      0x9ab ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_pwr.o
- .debug_line    0x00015aa3     0x170d ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rcc.o
- .debug_line    0x000171b0      0xe4b ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rcc_ex.o
- .debug_line    0x00017ffb     0x15e5 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rtc.o
- .debug_line    0x000195e0     0x2e3c ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_spi.o
- .debug_line    0x0001c41c     0x4c63 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_tim.o
- .debug_line    0x0002107f     0x1c7e ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_tim_ex.o
- .debug_line    0x00022cfd     0x5098 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_uart.o
- .debug_line    0x00027d95     0x169b ./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.o
- .debug_line    0x00029430      0x823 ./Middlewares/Third_Party/FreeRTOS/Source/list.o
- .debug_line    0x00029c53     0x1e2e ./Middlewares/Third_Party/FreeRTOS/Source/queue.o
- .debug_line    0x0002ba81     0x2711 ./Middlewares/Third_Party/FreeRTOS/Source/tasks.o
- .debug_line    0x0002e192      0xa55 ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.o
- .debug_line    0x0002ebe7      0xa74 ./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o
+ .debug_line    0x00001121     0x2486 ./Core/Src/GSM.o
+ .debug_line    0x000035a7      0xd13 ./Core/Src/Queue_GSM.o
+ .debug_line    0x000042ba      0xf65 ./Core/Src/RS232-UART1.o
+ .debug_line    0x0000521f      0xd13 ./Core/Src/RTC.o
+ .debug_line    0x00005f32      0x919 ./Core/Src/freertos.o
+ .debug_line    0x0000684b     0x12fe ./Core/Src/main.o
+ .debug_line    0x00007b49     0x192b ./Core/Src/spi_flash.o
+ .debug_line    0x00009474      0xd14 ./Core/Src/stm32f3xx_hal_msp.o
+ .debug_line    0x0000a188      0x90b ./Core/Src/stm32f3xx_hal_timebase_tim.o
+ .debug_line    0x0000aa93      0x977 ./Core/Src/stm32f3xx_it.o
+ .debug_line    0x0000b40a      0x96a ./Core/Src/syscalls.o
+ .debug_line    0x0000bd74      0x5ad ./Core/Src/sysmem.o
+ .debug_line    0x0000c321      0x9f4 ./Core/Src/system_management.o
+ .debug_line    0x0000cd15      0x89a ./Core/Src/system_stm32f3xx.o
+ .debug_line    0x0000d5af       0x7a ./Core/Startup/startup_stm32f303rctx.o
+ .debug_line    0x0000d629      0xbb3 ./Core/ThreadSafe/newlib_lock_glue.o
+ .debug_line    0x0000e1dc      0xb50 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal.o
+ .debug_line    0x0000ed2c      0x9ea ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc.o
+ .debug_line    0x0000f716     0x2ef7 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_adc_ex.o
+ .debug_line    0x0001260d      0xdec ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_cortex.o
+ .debug_line    0x000133f9      0xfae ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_dma.o
+ .debug_line    0x000143a7      0xd53 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_gpio.o
+ .debug_line    0x000150fa      0x9ab ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_pwr.o
+ .debug_line    0x00015aa5     0x170d ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rcc.o
+ .debug_line    0x000171b2      0xe4b ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rcc_ex.o
+ .debug_line    0x00017ffd     0x15e5 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_rtc.o
+ .debug_line    0x000195e2     0x2e3c ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_spi.o
+ .debug_line    0x0001c41e     0x4c63 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_tim.o
+ .debug_line    0x00021081     0x1c7e ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_tim_ex.o
+ .debug_line    0x00022cff     0x5098 ./Drivers/STM32F3xx_HAL_Driver/Src/stm32f3xx_hal_uart.o
+ .debug_line    0x00027d97     0x169b ./Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.o
+ .debug_line    0x00029432      0x823 ./Middlewares/Third_Party/FreeRTOS/Source/list.o
+ .debug_line    0x00029c55     0x1e2e ./Middlewares/Third_Party/FreeRTOS/Source/queue.o
+ .debug_line    0x0002ba83     0x2711 ./Middlewares/Third_Party/FreeRTOS/Source/tasks.o
+ .debug_line    0x0002e194      0xa55 ./Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/port.o
+ .debug_line    0x0002ebe9      0xa74 ./Middlewares/Third_Party/FreeRTOS/Source/portable/MemMang/heap_4.o
 
 .debug_str      0x00000000    0xd7313
- .debug_str     0x00000000    0xca421 ./Core/Src/GPS.o
-                              0xcabff (size before relaxing)
- .debug_str     0x000ca421      0xda7 ./Core/Src/GSM.o
-                              0xcb7fc (size before relaxing)
- .debug_str     0x000cb1c8       0x71 ./Core/Src/Queue_GSM.o
+ .debug_str     0x00000000    0xca477 ./Core/Src/GPS.o
+                              0xcac55 (size before relaxing)
+ .debug_str     0x000ca477      0xda7 ./Core/Src/GSM.o
+                              0xcb852 (size before relaxing)
+ .debug_str     0x000cb21e       0x71 ./Core/Src/Queue_GSM.o
                               0xc304f (size before relaxing)
- .debug_str     0x000cb239      0x153 ./Core/Src/RS232-UART1.o
+ .debug_str     0x000cb28f      0x153 ./Core/Src/RS232-UART1.o
                               0xc9ad2 (size before relaxing)
- .debug_str     0x000cb38c      0x29a ./Core/Src/RTC.o
-                              0xca93d (size before relaxing)
- .debug_str     0x000cb626      0x132 ./Core/Src/freertos.o
+ .debug_str     0x000cb3e2      0x29a ./Core/Src/RTC.o
+                              0xca993 (size before relaxing)
+ .debug_str     0x000cb67c      0x132 ./Core/Src/freertos.o
                               0xc3185 (size before relaxing)
- .debug_str     0x000cb758     0x12ca ./Core/Src/main.o
+ .debug_str     0x000cb7ae     0x12ca ./Core/Src/main.o
                               0xc7097 (size before relaxing)
- .debug_str     0x000cca22     0x151c ./Core/Src/spi_flash.o
+ .debug_str     0x000cca78     0x14c6 ./Core/Src/spi_flash.o
                               0xcc2aa (size before relaxing)
  .debug_str     0x000cdf3e      0x13d ./Core/Src/stm32f3xx_hal_msp.o
                               0xc0a29 (size before relaxing)
