@@ -42,9 +42,6 @@ extern osMailQId RMC_MailQFLASHId;
 extern osMailQId RMC_MailQGSMId;
 extern osMailQId RMC_MailQLEDId;
 
-extern osMailQId addr_MailQGSMId;
-extern osMailQId uint8MailQueue;
-
 #define TIMEOUT                 1000 // MS Timeout for HAL function calls
 #define PAGE_PROGRAM_TIMEOUT    1000 // MS Timeout for Program
 #define SECTOR_ERASE_TIMEOUT    1000 // MS Timeout for Sector Erase, Program, and Chip erase
@@ -107,6 +104,8 @@ extern Queue_GSM result_addr_queue;
 extern Queue_GSM mail_sent_queue;
 
 extern int mode;
+
+extern int count_shiftleft;
 
 int W25_ChipErase(void);
 

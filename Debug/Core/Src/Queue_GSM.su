@@ -7,3 +7,4 @@
 ../Core/Src/Queue_GSM.c:64:6:clearQueue_GSM	8	static
 ../Core/Src/Queue_GSM.c:74:5:printQueue_GSM	16	static
 ../Core/Src/Queue_GSM.c:89:5:checkAddrExistInQueue	16	static
+../Core/Src/Queue_GSM.c:105:6:deleteMiddle_GSM	16	static

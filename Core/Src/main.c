@@ -67,6 +67,7 @@ osThreadId SpiFlashHandle;
 osThreadId GPSHandle;
 osThreadId RFIDHandle;
 osThreadId GSMHandle;
+osSemaphoreId ShiftLeftSemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -154,6 +155,11 @@ int main(void)
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
+
+  /* Create the semaphores(s) */
+  /* definition and creation of ShiftLeftSem */
+  osSemaphoreDef(ShiftLeftSem);
+  ShiftLeftSemHandle = osSemaphoreCreate(osSemaphore(ShiftLeftSem), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */

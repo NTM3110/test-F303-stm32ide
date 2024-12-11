@@ -1044,7 +1044,7 @@ void receiveRMCDataWithAddrGSM(){
 		uart_transmit_string(&huart1, (uint8_t*)"Address received from MAIL QUEUE: \n");
 		GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
 		current_addr_gsm = receivedData->address;
-		if(checkAddrExistInQueue(current_addr_gsm, &result_addr_queue) == 0){
+		if(checkAddrExistInQueue(current_addr_gsm, &result_addr_queue) == 0 || current_addr_gsm >= end_addr_disconnect){
 //			current_addr_gsm = receivedData->address;
 			Debug_printf("Saving data to variable to send to the server\n");
 			Debug_printf("\n---------- Current data accepted at address: %08lx----------\n", current_addr_gsm);
@@ -1314,17 +1314,32 @@ void StartGSM(void const * argument)
 								enqueue_GSM(&result_addr_queue, current_addr_gsm);
 
 
-
 								Debug_printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
 								printQueue_GSM(&result_addr_queue);
 
-								if(start_addr_disconnect >= end_addr_disconnect){
+								if(start_addr_disconnect >= end_addr_disconnect - 128){
 									Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
 									is_using_flash = 0;
 									clearQueue_GSM(&result_addr_queue);
 //									clearQueue_GSM(&mail_sent_queue);
 									start_addr_disconnect = 0;
 									end_addr_disconnect = 0;
+									count_shiftleft = 0;
+									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+									while(1){
+										Debug_printf("Receiving MAIL\n");
+										osEvent evt = osMailGet(RMC_MailQGSMId, 2000); // Get a message
+										if(evt.status == osEventMail){
+											GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
+											Debug_printf("Receiving MAIL: %08lx\n", receivedData->address);
+											// After processing, free the mail to clear it
+											osMailFree(RMC_MailQGSMId, receivedData);  // Discards the message
+										}
+										else{
+											Debug_printf("Have cleared out all mail queue\n");
+											break;
+										}
+									}
 								}
 								else{
 									is_using_flash = 1;
@@ -1344,6 +1359,55 @@ void StartGSM(void const * argument)
 							uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
 							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 							SIM_UART_ReInitializeRxDMA();
+							//Reconnect then disconnect case: "HAVE NOT COMPLETE Get and send all the data from the last disconnect phase"
+							if(is_using_flash == 1){
+								Debug_printf("\n-----------------BEFORE update the result address data --------------\n");
+								printQueue_GSM(&result_addr_queue);
+								Debug_printf("\n---------------Update the result address data--------------\n");
+
+								start_addr_disconnect -= 128 * count_shiftleft;
+								end_addr_disconnect -= 128 *count_shiftleft;
+								//Delete all the address that has been getting from FLASH.
+								for (int i = 0; i < result_addr_queue.size; i++) {
+									int idx = (result_addr_queue.front + i) % MAX_SIZE;
+									if(result_addr_queue.data[idx] != 0x3F00){
+
+//										result_addr_queue.data[idx] -= 128 * count_shiftleft;
+										deleteMiddle_GSM(&result_addr_queue, idx);
+									}
+								}
+								//This is the current address when fetching simultaneously with FLASH.
+								int count_shiftleft_dub = count_shiftleft;
+								for (int i = 0; i < result_addr_queue.size; i++) {
+									int idx = (result_addr_queue.front + i) % MAX_SIZE;
+									if(result_addr_queue.data[idx] == 0x3F00){
+										result_addr_queue.data[idx] -= 128 * count_shiftleft_dub;
+										count_shiftleft_dub -= 1;
+									}
+								}
+								printQueue_GSM(&result_addr_queue);
+
+								count_shiftleft = 0;
+
+								//Clear osMail
+
+
+								Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+								while(1){
+									Debug_printf("Receiving MAIL\n");
+									osEvent evt = osMailGet(RMC_MailQGSMId, 2000); // Get a message
+									if(evt.status == osEventMail){
+										GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
+										Debug_printf("Receiving MAIL: %08lx\n", receivedData->address);
+										// After processing, free the mail to clear it
+										osMailFree(RMC_MailQGSMId, receivedData);  // Discards the message
+									}
+									else{
+										Debug_printf("Have cleared out all mail queue\n");
+										break;
+									}
+								}
+							}
 							if(is_disconnect == 0){
 								if(is_using_flash == 0){
 									start_addr_disconnect = current_addr_gsm;
@@ -1352,6 +1416,7 @@ void StartGSM(void const * argument)
 								is_disconnect = 1;
 								is_using_flash = 0;
 							}
+
 							process++;
 							break;
 						}

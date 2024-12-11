@@ -38,6 +38,7 @@ uint32_t peek_GSM(Queue_GSM* q);
 void clearQueue_GSM(Queue_GSM* q);
 int printQueue_GSM(Queue_GSM* q);
 int checkAddrExistInQueue(uint32_t addr, Queue_GSM* queue);
+void deleteMiddle_GSM(Queue_GSM* q, int indexToDelete);
 
 #endif // QUEUE_GSM_H
 

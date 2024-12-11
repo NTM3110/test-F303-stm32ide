@@ -35,6 +35,6 @@
 ../Core/Src/GSM.c:956:5:close_connection	4
 ../Core/Src/GSM.c:985:5:extract_time_CCLK	3
 ../Core/Src/GSM.c:1014:5:getCurrentTime	3
-../Core/Src/GSM.c:1038:6:receiveRMCDataWithAddrGSM	3
+../Core/Src/GSM.c:1038:6:receiveRMCDataWithAddrGSM	4
 ../Core/Src/GSM.c:1089:5:processUploadDataToServer	3
-../Core/Src/GSM.c:1119:6:StartGSM	33
+../Core/Src/GSM.c:1119:6:StartGSM	40

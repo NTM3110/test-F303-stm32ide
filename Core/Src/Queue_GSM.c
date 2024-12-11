@@ -100,3 +100,29 @@ int checkAddrExistInQueue(uint32_t addr, Queue_GSM* q) {
     Debug_printf("NOT FOUND ADDRESS: %08lx\n", addr);
     return 0;
 }
+
+// Function to delete a parameter in the middle of the Queue_GSM
+void deleteMiddle_GSM(Queue_GSM* q, int indexToDelete) {
+    if (isEmpty_GSM(q)) {
+        Debug_printf("Queue_GSM is empty. Nothing to delete.\n");
+        return;
+    }
+    if (indexToDelete < 0 || indexToDelete >= q->size) {
+        Debug_printf("Invalid index. Cannot delete.\n");
+        return;
+    }
+
+    // Shift elements to the left to overwrite the element at indexToDelete
+    int actualIndex = (q->front + indexToDelete) % MAX_SIZE;
+    for (int i = 0; i < q->size - 1; i++) {
+        int currentIdx = (actualIndex + i) % MAX_SIZE;
+        int nextIdx = (currentIdx + 1) % MAX_SIZE;
+        q->data[currentIdx] = q->data[nextIdx];
+    }
+
+    // Update rear and size
+    q->rear = (q->rear - 1 + MAX_SIZE) % MAX_SIZE;
+    q->size--;
+    Debug_printf("Element at index %d deleted successfully.\n", indexToDelete);
+}
+
