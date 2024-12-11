@@ -22,7 +22,6 @@
 ../Core/Src/GSM.c:507:6:check_configure_APN	1
 ../Core/Src/GSM.c:513:5:configure_APN	3
 ../Core/Src/GSM.c:532:6:check_activate_context	1
-../Core/Src/GSM.c:539:6:Delay_40s	3
 ../Core/Src/GSM.c:550:5:activate_context	6
 ../Core/Src/GSM.c:598:5:deactivate_context	4
 ../Core/Src/GSM.c:629:5:open_socket_service	8
@@ -36,6 +35,6 @@
 ../Core/Src/GSM.c:956:5:close_connection	4
 ../Core/Src/GSM.c:985:5:extract_time_CCLK	3
 ../Core/Src/GSM.c:1014:5:getCurrentTime	3
-../Core/Src/GSM.c:1037:6:receiveRMCDataWithAddrGSM	3
-../Core/Src/GSM.c:1088:5:processUploadDataToServer	3
-../Core/Src/GSM.c:1118:6:StartGSM	33
+../Core/Src/GSM.c:1038:6:receiveRMCDataWithAddrGSM	4
+../Core/Src/GSM.c:1089:5:processUploadDataToServer	3
+../Core/Src/GSM.c:1119:6:StartGSM	40

@@ -10,16 +10,16 @@
 #include "GPS.h"
 #include "RTC.h"
 
-#include"Queue_GSM.h"
+#include "Queue_GSM.h"
 
 #define FLASH_START_ADDRESS 0x3000
-#define FLASH_END_ADDRESS   0x5000
+#define FLASH_END_ADDRESS   0x4000
 #define SECTOR_SIZE         0x1000 // Assuming sector size is 4 KB
 #define PAGE_SIZE           0x80
 
 uint8_t current_sector_buffer[SECTOR_SIZE];
-uint8_t previous_page_buffer[PAGE_SIZE];
 uint8_t next_page_buffer[PAGE_SIZE];
+uint32_t addr_to_get_from_FLASH;
 
 
 extern UART_HandleTypeDef huart1;
@@ -439,7 +439,7 @@ void saveRMC(){
 	uart_transmit_string(&huart1, (uint8_t*) "Buffer before saving to FLASH: ");
 	uart_transmit_string(&huart1, rmcBufferDemo);
 	current_addr = address_rmc;
-	if(address_rmc == 0x4F80){
+	if(address_rmc == 0x3F80){
 		is_flash_overflow = 1;
 		Debug_printf(" ADDRESS RMC before SHIFT LEFT BY ONE PAGE: %08lx", address_rmc);
 		W25_Reset();
@@ -448,21 +448,26 @@ void saveRMC(){
 
 		W25_ShiftLeftFlashDataByPage();
 		address_rmc -= 128;
-		if(start_addr_disconnect > 0x3000)
+		if(is_using_flash == 0 && start_addr_disconnect > 0x3000){
 			start_addr_disconnect -= 128;
-		current_addr -= 128;
-		if(end_addr_disconnect > 0x3000)
-			end_addr_disconnect -= 128;
-		Node* temp = result_addr_queue.front;
-		int idx =0;
-		Debug_printf("Queue_GSM contents: \n");
-		while (temp != NULL) {
-			if(temp->data == 0x3000) break;
-			temp->data -= 128;
-			Debug_printf("Index %d: %08x\n",idx, (temp->data));
-			idx++;
-			temp = temp->next;
+			Debug_printf("\n-----------------BEFORE update the result address data --------------\n");
+			printQueue_GSM(&result_addr_queue);
+			Debug_printf("\n---------------Update the result address data--------------\n");
+			for (int i = 0; i < result_addr_queue.size; i++) {
+				int idx = (result_addr_queue.front + i) % MAX_SIZE;
+				result_addr_queue.data[idx] -= 128;
+				Debug_printf("Index %d: %08x\n", i, result_addr_queue.data[idx]);
+			}
+			if(end_addr_disconnect > start_addr_disconnect)
+				end_addr_disconnect -= 128;
 		}
+		Debug_printf("\n--------------CURRENT START ADDRESS DISCONNECT: %08lx-------------\n", start_addr_disconnect);
+		if( is_using_flash == 1 && (start_addr_disconnect - count_shiftleft * 128) > 0x3000){
+			count_shiftleft++;
+			Debug_printf("\n--------------SHIFT LEFT COUNT: %d-------------\n", count_shiftleft);
+		}
+		current_addr -= 128;
+	    Debug_printf("\n");
 		Debug_printf(" ADDRESS RMC after SHIFT LEFT BY ONE PAGE: %08lx", address_rmc);
 		W25_Reset();
 		W25_ReadData(address_rmc, flashBufferRMCReceived, 128);
@@ -471,7 +476,7 @@ void saveRMC(){
 	else {
 		is_flash_overflow = 0;
 	}
-	if(address_rmc < 0x4F80)
+	if(address_rmc < 0x3F80)
 		address_rmc += 128;
 	HAL_Delay(1000);
 	Debug_printf("\n");
@@ -563,19 +568,6 @@ RMCSTRUCT readFlash(uint32_t addr){
 	return rmc;
 }
 
-int checkSentToServer(uint32_t addr, Queue_GSM *queue){
-	Node* temp = queue->front;
-	int idx =0;
-	Debug_printf("Queue_GSM contents: \n");
-	while (temp != NULL) {
-		Debug_printf("Index %d: %08x\n",idx, (temp->data));
-		if(temp->data == addr)
-			return 1;
-		idx++;
-		temp = temp->next;
-	}
-	 return 0;
-}
 
 void receiveRMCDataFromGPS(void) {
 	static int countRMCReceived = 0;
@@ -620,7 +612,7 @@ void receiveRMCDataFromGPS(void) {
 		format_rmc_data(&rmc_flash,(char*) rmcBufferDemo, 128);
 
 		if(rmc_flash.date.Yr >= 24){
-			if(countRMCReceived == 9){
+			if(countRMCReceived == 6){
 
 				saveRMC();
 				Debug_printf("---------------------Sending the current data----------------");
@@ -644,19 +636,24 @@ void receiveRMCDataFromGPS(void) {
 			else{
 
 				/*
-				 * Case 1: Sent the data from flash successfully so move to the next page.
+				 * CASE 1: Sent the data from flash successfully so move to the next page.
 				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
 				 */
-				if(checkSentToServer(start_addr_disconnect, &result_addr_queue)){
-					Debug_printf("\n-------SKIPPING address cause it was sent already: %08lx--------\n", start_addr_disconnect);
-					start_addr_disconnect +=128;
+				if(is_using_flash == 1 && is_disconnect == 0){
+					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue)){
+						Debug_printf("\n-------SKIPPING address cause it was sent already: %08lx--------\n", start_addr_disconnect);
+						start_addr_disconnect +=128;
+					}
+					else{
+						addr_to_get_from_FLASH = start_addr_disconnect - (count_shiftleft * 128);
+						if(addr_to_get_from_FLASH < 0x3000) addr_to_get_from_FLASH = 0x3000;
+						Debug_printf("\n---------------- Sending data in disconnected phase to GSM: %08lx -------------------\n", start_addr_disconnect);
+						mail_gsm.rmc = readFlash(addr_to_get_from_FLASH);
+						mail_gsm.address = start_addr_disconnect;
+						sendRMCDataWithAddrToGSM(&mail_gsm);
+					}
 				}
-				if((is_using_flash == 1 && is_disconnect == 0) && checkSentToServer(start_addr_disconnect, &result_addr_queue) == 0){
-					Debug_printf("\n---------------- Sending data in disconnected phase to GSM: %08lx -------------------\n", start_addr_disconnect);
-					mail_gsm.rmc = readFlash(start_addr_disconnect);
-					mail_gsm.address = start_addr_disconnect;
-					sendRMCDataWithAddrToGSM(&mail_gsm);
-				}
+				//is_over_flow = 0;
 			}
 		}
 		osMailFree(RMC_MailQFLASHId, receivedData);
@@ -675,6 +672,7 @@ void StartSpiFlash(void const * argument)
 
 	osMailQDef(GSM_MailQ, 128, GSM_MAIL_STRUCT);
 	RMC_MailQGSMId = osMailCreate(osMailQ(GSM_MailQ), NULL);
+
 //	result_address = 0x3280;
 
 	for(;;){

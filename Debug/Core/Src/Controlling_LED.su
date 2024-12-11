@@ -1,7 +1,0 @@
-../Core/Src/Controlling_LED.c:29:6:RingBufferDmaU8_initADCRx	4	static
-../Core/Src/Controlling_LED.c:38:6:ADC2_ReInitializeRxDMA	8	static
-../Core/Src/Controlling_LED.c:48:6:Blink_LED	8	static
-../Core/Src/Controlling_LED.c:55:6:sendUint32Array	24	dynamic
-../Core/Src/Controlling_LED.c:71:6:setUint32Array	16	static
-../Core/Src/Controlling_LED.c:79:6:receiveRMCDataWithAddrLED	72	static
-../Core/Src/Controlling_LED.c:119:6:StartControllingLED	24	static

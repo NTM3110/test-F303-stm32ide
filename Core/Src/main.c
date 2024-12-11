@@ -67,7 +67,7 @@ osThreadId SpiFlashHandle;
 osThreadId GPSHandle;
 osThreadId RFIDHandle;
 osThreadId GSMHandle;
-osSemaphoreId timerBinarySemHandle;
+osSemaphoreId ShiftLeftSemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -157,9 +157,9 @@ int main(void)
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* definition and creation of timerBinarySem */
-  osSemaphoreDef(timerBinarySem);
-  timerBinarySemHandle = osSemaphoreCreate(osSemaphore(timerBinarySem), 1);
+  /* definition and creation of ShiftLeftSem */
+  osSemaphoreDef(ShiftLeftSem);
+  ShiftLeftSemHandle = osSemaphoreCreate(osSemaphore(ShiftLeftSem), 1);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
@@ -175,7 +175,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 256);
+//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 //
 //  /* definition and creation of ControllingLED */
@@ -191,7 +191,7 @@ int main(void)
   SpiFlashHandle = osThreadCreate(osThread(SpiFlash), NULL);
 
   /* definition and creation of GPS */
-  osThreadDef(GPS, StartGPS, osPriorityIdle, 0, 640);
+  osThreadDef(GPS, StartGPS, osPriorityIdle, 0, 480);
   GPSHandle = osThreadCreate(osThread(GPS), NULL);
 
 //  /* definition and creation of RFID */
@@ -199,7 +199,7 @@ int main(void)
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
   /* definition and creation of GSM */
-  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1560);
+  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1024);
   GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -823,6 +823,7 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
+
 
 /**
   * @brief  Period elapsed callback in non blocking mode
