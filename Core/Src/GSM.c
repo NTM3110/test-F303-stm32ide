@@ -23,7 +23,6 @@ RingBufferDmaU8_TypeDef SIMRxDMARing;
 int is_activated = 0;
 int is_set_time = 0;
 int received_RMC = 0;
-int is_ready_to_send = 0;
 int is_in_sending = 0;
 
 volatile uint32_t start_addr_not_ready = 0;
@@ -107,26 +106,6 @@ uint8_t calculate_checksum(uint8_t *data, size_t length) {
         checksum ^= data[i];
     }
     return checksum;
-}
-
-// Function to create and return the message array
-uint8_t* create_message_array(JT808_TerminalRegistration *reg_msg, size_t *array_length) {
-    // Calculate the size of the array
-    *array_length = sizeof(JT808_TerminalRegistration);
-    
-    // Allocate memory for the message array
-    uint8_t *message_array = (uint8_t *)malloc(*array_length);
-    if (message_array == NULL) {
-        return NULL; // Return NULL if allocation fails
-    }
-
-    // Calculate checksum and assign it to the struct
-    reg_msg->check_sum = calculate_checksum((uint8_t *)reg_msg, sizeof(JT808_TerminalRegistration));
-
-    // Copy struct contents into the message array
-    memcpy(message_array, reg_msg, *array_length);
-
-    return message_array;
 }
 
 uint8_t *convert_location_info_to_array(JT808_LocationInfoReport *location_info, size_t *array_length) {
@@ -232,44 +211,6 @@ void save_rmc_to_location_info(JT808_LocationInfoReport* location_info){
 	location_info->direction[1] =  direction & 0xFF;
 	
 	set_status_bit(location_info->status);
-}
-
-
-
-int extract_time(uint8_t *message){
-    int year, month, day, hour, minute, second;
-    uint8_t output_buffer[128];
-    // Search for the +CTZE line and extract date and time
-    char *tz_line = strstr((char*) message, "+CTZE");
-    if (tz_line){
-        sscanf(tz_line, "+CTZE: \"+28\",0,\"%d/%d/%d,%d:%d:%d\"", &year, &month, &day, &hour, &minute, &second);
-
-        // Adjust for GMT+8 (originally in UTC+8, so add 1 hour)
-        hour += 8;
-        if (hour >= 24) {
-            hour -= 24;
-            day += 1;
-            // Simplified example: Add code here to handle month/day overflow as needed
-        }
-        if(year < 2024) return 0;
-		rmc_jt.date.Yr = year-2000;
-		rmc_jt.date.Mon = month;
-		rmc_jt.date.Day = day;
-		rmc_jt.tim.hour = hour;
-		rmc_jt.tim.min = minute;
-		rmc_jt.tim.sec = second;
-        snprintf((char*)output_buffer, 128, "Adjusted time to GMT+8: 20%02d/%02d/%02d, %02d:%02d:%02d\n", rmc_jt.date.Yr, rmc_jt.date.Mon, rmc_jt.date.Day, rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
-		uart_transmit_string(&huart1, (uint8_t*) "RTC Time: ");
-		set_time(hour, minute, second);
-		set_date(year-2000, month, day);
-		uart_transmit_string(&huart1, (uint8_t*) "\n");
-		uart_transmit_string(&huart1, output_buffer);
-	} else {
-		snprintf((char*)output_buffer, 128, "Time information not found");
-		uart_transmit_string(&huart1, output_buffer);
-		//return 0;
-	}
-    return 1;
 }
 
 //AT
@@ -1118,11 +1059,8 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 
 void StartGSM(void const * argument)
 {
-	uart_transmit_string(&huart1, (uint8_t*)"Starting GSM: Pushing data to Server");
   /* USER CODE BEGIN StartGSM */
-  /* Infinite loop */   // Buffer for received data
-//	uint8_t response[4];   // Buffer for received data
-	// Flag to indicate data reception
+	Debug_printf("------------------------ Starting GSM: Pushing data to Server ------------------------");
 	RingBufferDmaU8_initUSARTRx(&SIMRxDMARing, &huart3, response, SIM_RESPONSE_MAX_SIZE);
 	
 	JT808_TerminalRegistration reg_msg = create_terminal_registration();
@@ -1147,6 +1085,7 @@ void StartGSM(void const * argument)
 //	char output_elapsed[128];
 	for(;;)
 	{
+//		Debug_printf("\n\n\n--------------------- INSIDE GSM -----------------------\n\n\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 		osDelay(300);
 		switch(process){
@@ -1310,14 +1249,11 @@ void StartGSM(void const * argument)
 									Debug_printf("End address of network outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
 								}
 								Debug_printf("\n-----------ADDING current address to the result queue----------\n");
-
 								enqueue_GSM(&result_addr_queue, current_addr_gsm);
-
 
 								Debug_printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
 								printQueue_GSM(&result_addr_queue);
-
-								if(start_addr_disconnect >= end_addr_disconnect - 128){
+								if(start_addr_disconnect >= end_addr_disconnect - 128 && checkAddrExistInQueue(end_addr_disconnect - 128, &result_addr_queue)){
 									Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
 									is_using_flash = 0;
 									clearQueue_GSM(&result_addr_queue);
@@ -1365,12 +1301,11 @@ void StartGSM(void const * argument)
 								printQueue_GSM(&result_addr_queue);
 								Debug_printf("\n---------------Update the result address data--------------\n");
 
-								start_addr_disconnect -= 128 * count_shiftleft;
-								end_addr_disconnect -= 128 *count_shiftleft;
+
 								//Delete all the address that has been getting from FLASH.
 								for (int i = 0; i < result_addr_queue.size; i++) {
 									int idx = (result_addr_queue.front + i) % MAX_SIZE;
-									if(result_addr_queue.data[idx] != FLASH_END_ADDRESS-0x100){
+									if(result_addr_queue.data[idx] < start_addr_disconnect){
 
 //										result_addr_queue.data[idx] -= 128 * count_shiftleft;
 										deleteMiddle_GSM(&result_addr_queue, idx);
@@ -1384,8 +1319,13 @@ void StartGSM(void const * argument)
 										result_addr_queue.data[idx] -= 128 * count_shiftleft_dub;
 										count_shiftleft_dub -= 1;
 									}
+									else{
+										result_addr_queue.data[idx] -= 128 * count_shiftleft;
+									}
 								}
 								printQueue_GSM(&result_addr_queue);
+								start_addr_disconnect -= 128 * count_shiftleft;
+								end_addr_disconnect -= 128 *count_shiftleft;
 
 								count_shiftleft = 0;
 

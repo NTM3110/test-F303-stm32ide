@@ -116,7 +116,7 @@ void parse_rmc(uint8_t *rmc_sentence) {
                     rmc.lcation.longitude = (atof((char *)rmc_sentence))/100;
                     int longi_int = (int)floor(rmc.lcation.longitude);
 					float longi_float = rmc.lcation.longitude - longi_int;
-					longi_float = longi_float/0.6;
+					longi_float = longi_float / 0.6;
 					rmc.lcation.longitude = longi_int + longi_float;
                     break;
                 case 6:  // E/W
@@ -224,18 +224,12 @@ void StartGPS(void const * argument)
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
+//		Debug_printf("\n\n\n----------------------- Inside GPS ------------------------\n\n\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		HAL_Delay(1500);
+		HAL_Delay(500);
 		getRMC();
-		//rmc.lcation.latitude -= 0.000001;
-//		rmc.tim.sec += 2;
-//		rmc.lcation.latitude = route[count].latitude;
-//		rmc.lcation.longitude = route[count].longitude;
-//		count++;
-		HAL_UART_Transmit(&huart1, (uint8_t *)"Getting GPS \n", strlen("Getting GPS \n"), 1000);
-		uart_transmit_string(&huart1,(uint8_t*) "\n\n ");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_Delay(1500);
+		HAL_Delay(500);
 	}
   /* USER CODE END StartGPS */
 }

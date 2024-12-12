@@ -444,24 +444,32 @@ void saveRMC(){
 
 		W25_ShiftLeftFlashDataByPage();
 		address_rmc -= 128;
-		if(is_using_flash == 0 && start_addr_disconnect > FLASH_START_ADDRESS){
-			start_addr_disconnect -= 128;
+		if(is_using_flash == 0){
+			if(start_addr_disconnect > FLASH_START_ADDRESS)
+				start_addr_disconnect -= 128;
 			Debug_printf("\n-----------------BEFORE update the result address data --------------\n");
 			printQueue_GSM(&result_addr_queue);
 			Debug_printf("\n---------------Update the result address data--------------\n");
 			for (int i = 0; i < result_addr_queue.size; i++) {
 				int idx = (result_addr_queue.front + i) % MAX_SIZE;
-				result_addr_queue.data[idx] -= 128;
+				if(result_addr_queue.data[idx] >= 0x3000)
+					result_addr_queue.data[idx] -= 128;
+//				Debug_printf("Index %d: %08x\n", i, result_addr_queue.data[idx]);
+			}
+			for (int i = 0; i < result_addr_queue.size; i++) {
+				int idx = (result_addr_queue.front + i) % MAX_SIZE;
+				if(result_addr_queue.data[idx] < 0x3000)
+					deleteMiddle_GSM(&result_addr_queue, idx);
 				Debug_printf("Index %d: %08x\n", i, result_addr_queue.data[idx]);
 			}
 			if(end_addr_disconnect > start_addr_disconnect)
 				end_addr_disconnect -= 128;
 		}
 		Debug_printf("\n--------------CURRENT START ADDRESS DISCONNECT: %08lx-------------\n", start_addr_disconnect);
-		if( is_using_flash == 1 && (start_addr_disconnect - count_shiftleft * 128) > FLASH_START_ADDRESS){
+		if( is_using_flash == 1 && (start_addr_disconnect - count_shiftleft * 128) >= FLASH_START_ADDRESS){
 			count_shiftleft++;
-			Debug_printf("\n--------------SHIFT LEFT COUNT: %d-------------\n", count_shiftleft);
 		}
+		Debug_printf("\n--------------SHIFT LEFT COUNT: %d-------------\n", count_shiftleft);
 		current_addr -= 128;
 	    Debug_printf("\n");
 		Debug_printf(" ADDRESS RMC after SHIFT LEFT BY ONE PAGE: %08lx", address_rmc);
@@ -534,11 +542,8 @@ void parseRMCString(uint8_t *str, RMCSTRUCT *rmc) {
 }
 
 RMCSTRUCT readFlash(uint32_t addr){
-	char addr_out[10];
-	uart_transmit_string(&huart1, (uint8_t*)"Address received from FLASH: \n");
-	sprintf(addr_out, "%08lx", (addr));
-	HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 8, 1000);
-	HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
+//	char addr_out[10];
+	Debug_printf("Address received from FLASH: %08lx \n", addr);
 	W25_Reset();
 	W25_ReadData(addr, flashBufferRMCReceived, 128);
 	char spi_flash_data_intro[] = "Flash DATA at CONTROLLING LED received: ";
@@ -567,10 +572,10 @@ RMCSTRUCT readFlash(uint32_t addr){
 
 void receiveRMCDataFromGPS(void) {
 	static int countRMCReceived = 0;
-	uint8_t output_buffer[70];
+//	uint8_t output_buffer[70];
 
 	// Wait until there are at least 10 messages in the queue
-	uart_transmit_string(&huart1, (uint8_t*)"Inside Receiving RMC Data SPI FLASH\n");
+//	Debug_printf("Inside Receiving RMC Data SPI FLASH\n");
 	osEvent evt = osMailGet(RMC_MailQFLASHId, osWaitForever); // Wait for mail
 	if(evt.status == osEventMail){
 		uart_transmit_string(&huart1, (uint8_t*)"\nReceived  RMC Data SPI FLASH: \n");
@@ -593,22 +598,18 @@ void receiveRMCDataFromGPS(void) {
 
 		get_RTC_time_date(&rmc_flash);
 
-		snprintf((char *)output_buffer, sizeof(output_buffer), "\n\nTime Received from GPS AT SPI FLASH: %d:%d:%d\n", rmc_flash.tim.hour, rmc_flash.tim.min, rmc_flash.tim.sec);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Date Received FROM GPS AT SPI FLASH : %d/%d/%d\n", rmc_flash.date.Day, rmc_flash.date.Mon, rmc_flash.date.Yr);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer), "Location Received FROM GPS AT SPI FLASH: %.6f %c, %.6f %c\n", rmc_flash.lcation.latitude, rmc_flash.lcation.NS, rmc_flash.lcation.longitude, rmc_flash.lcation.EW);
-		uart_transmit_string(&huart1, output_buffer);
-
-		snprintf((char *)output_buffer, sizeof(output_buffer),"Speed FROM GPS AT SPI FLASH: %.2f, Course: %.2f, Valid: %d\n\n\n", rmc_flash.speed, rmc_flash.course, rmc_flash.isValid);
-		uart_transmit_string(&huart1, output_buffer);
+//		Debug_printf("\n\nTime Received from GPS AT SPI FLASH: %d:%d:%d\n", rmc_flash.tim.hour, rmc_flash.tim.min, rmc_flash.tim.sec);
+//
+//		Debug_printf("Date Received FROM GPS AT SPI FLASH : %d/%d/%d\n", rmc_flash.date.Day, rmc_flash.date.Mon, rmc_flash.date.Yr);
+//
+//		Debug_printf("Location Received FROM GPS AT SPI FLASH: %.6f %c, %.6f %c\n", rmc_flash.lcation.latitude, rmc_flash.lcation.NS, rmc_flash.lcation.longitude, rmc_flash.lcation.EW);
+//
+//		Debug_printf("Speed FROM GPS AT SPI FLASH: %.2f, Course: %.2f, Valid: %d\n\n\n", rmc_flash.speed, rmc_flash.course, rmc_flash.isValid);
 
 		format_rmc_data(&rmc_flash,(char*) rmcBufferDemo, 128);
 
 		if(rmc_flash.date.Yr >= 24){
-			if(countRMCReceived == 6){
+			if(countRMCReceived == 17){
 
 				saveRMC();
 				Debug_printf("---------------------Sending the current data----------------");
@@ -664,6 +665,7 @@ void StartSpiFlash(void const * argument)
 {
   /* USER CODE BEGIN StartSpiFlash */
   /* Infinite loop */
+	Debug_printf("\n\n\n------------------------------- STARTING SPI FLASH ------------------------------\n\n\n");
 	current_addr = address_rmc;
 
 	osMailQDef(GSM_MailQ, 128, GSM_MAIL_STRUCT);
@@ -672,8 +674,8 @@ void StartSpiFlash(void const * argument)
 //	result_address = 0x3280;
 
 	for(;;){
-		osDelay(1500);
-		//uart_transmit_string(&huart1, (uint8_t*) "INSIDE SPI FLASH\n");
+		osDelay(500);
+//		uart_transmit_string(&huart1, (uint8_t*) "\n\n\n--------------------- INSIDE SPI FLASH ------------------------\n\n\n");
 		W25_Reset();
 		W25_ReadJedecID();
 		W25_Reset();
@@ -684,7 +686,7 @@ void StartSpiFlash(void const * argument)
 		//receiveTaxData();
 		receiveRMCDataFromGPS();
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
-		osDelay(1500);
+		osDelay(500);
   }
   /* USER CODE END StartSpiFlash */
 }
