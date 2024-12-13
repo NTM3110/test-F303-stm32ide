@@ -454,21 +454,20 @@ void saveRMC(){
 				int idx = (result_addr_queue.front + i) % MAX_SIZE;
 				if(result_addr_queue.data[idx] >= 0x3000)
 					result_addr_queue.data[idx] -= 128;
-//				Debug_printf("Index %d: %08x\n", i, result_addr_queue.data[idx]);
 			}
 			for (int i = 0; i < result_addr_queue.size; i++) {
 				int idx = (result_addr_queue.front + i) % MAX_SIZE;
 				if(result_addr_queue.data[idx] < 0x3000)
 					deleteMiddle_GSM(&result_addr_queue, idx);
-				Debug_printf("Index %d: %08x\n", i, result_addr_queue.data[idx]);
 			}
+			printQueue_GSM(&result_addr_queue);
 			if(end_addr_disconnect > start_addr_disconnect)
 				end_addr_disconnect -= 128;
 		}
-		Debug_printf("\n--------------CURRENT START ADDRESS DISCONNECT: %08lx-------------\n", start_addr_disconnect);
-		if( is_using_flash == 1 && (start_addr_disconnect - count_shiftleft * 128) >= FLASH_START_ADDRESS){
+		else{
 			count_shiftleft++;
 		}
+		Debug_printf("\n--------------CURRENT START ADDRESS DISCONNECT: %08lx-------------\n", start_addr_disconnect);
 		Debug_printf("\n--------------SHIFT LEFT COUNT: %d-------------\n", count_shiftleft);
 		current_addr -= 128;
 	    Debug_printf("\n");

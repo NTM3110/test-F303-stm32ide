@@ -112,7 +112,7 @@ extern Queue_GSM mail_sent_queue;
 
 extern int mode;
 
-extern int count_shiftleft;
+extern uint8_t count_shiftleft;
 
 int W25_ChipErase(void);
 

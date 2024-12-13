@@ -1306,9 +1306,10 @@ void StartGSM(void const * argument)
 								for (int i = 0; i < result_addr_queue.size; i++) {
 									int idx = (result_addr_queue.front + i) % MAX_SIZE;
 									if(result_addr_queue.data[idx] < start_addr_disconnect){
-
+										Debug_printf("CURRENT INDEX TO CHECK DELETING: %08lx", result_addr_queue.data[idx]);
 //										result_addr_queue.data[idx] -= 128 * count_shiftleft;
 										deleteMiddle_GSM(&result_addr_queue, idx);
+										i--;
 									}
 								}
 								//This is the current address when fetching simultaneously with FLASH.
@@ -1325,6 +1326,7 @@ void StartGSM(void const * argument)
 								}
 								printQueue_GSM(&result_addr_queue);
 								start_addr_disconnect -= 128 * count_shiftleft;
+								if(start_addr_disconnect < 0x3000) start_addr_disconnect = 0x3000;
 								end_addr_disconnect -= 128 *count_shiftleft;
 
 								count_shiftleft = 0;
