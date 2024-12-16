@@ -44,7 +44,7 @@ void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
 	{
 		Error_Handler();			
 	}		
-	HAL_Delay(50);	//	50 is OK
+	osDelay(50);	//	50 is OK
 	//memset(gnssDmaRingBufferMemory, 0x20, sizeof(gnssDmaRingBufferMemory));	// insert buffer with space character	
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 }
@@ -226,10 +226,10 @@ void StartGPS(void const * argument)
 	{
 //		Debug_printf("\n\n\n----------------------- Inside GPS ------------------------\n\n\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		HAL_Delay(500);
+		osDelay(500);
 		getRMC();
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_Delay(500);
+		osDelay(500);
 	}
   /* USER CODE END StartGPS */
 }

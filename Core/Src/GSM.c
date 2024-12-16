@@ -1235,6 +1235,9 @@ void StartGSM(void const * argument)
 						HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 128, 1000);
 						HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n", 1, 1000);
 
+
+						HAL_TIM_Base_Start(&htim3);
+						__HAL_TIM_SET_COUNTER(&htim3, 0);
 						int result_final = processUploadDataToServer(&location_info);
 						if(result_final == 1){
 							countReconnect = 0;
@@ -1362,8 +1365,10 @@ void StartGSM(void const * argument)
 							process++;
 							break;
 						}
+						int period = __HAL_TIM_GET_COUNTER(&htim3)/1000;
+						Debug_printf("\n--------------------Sending to SERVER takes %d -----------------------\n\n",period);
+						osDelay(200);
 					}
-					osDelay(200);
 				}
 				break;
 

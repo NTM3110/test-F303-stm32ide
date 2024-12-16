@@ -608,7 +608,7 @@ void receiveRMCDataFromGPS(void) {
 		format_rmc_data(&rmc_flash,(char*) rmcBufferDemo, 128);
 
 		if(rmc_flash.date.Yr >= 24){
-			if(countRMCReceived == 17){
+			if(countRMCReceived == 19){
 
 				saveRMC();
 				Debug_printf("---------------------Sending the current data----------------");
