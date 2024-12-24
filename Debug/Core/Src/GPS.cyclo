@@ -5,4 +5,4 @@
 ../Core/Src/GPS.c:88:6:parse_rmc	14
 ../Core/Src/GPS.c:148:6:sendRMCDataToFlash	2
 ../Core/Src/GPS.c:158:6:getRMC	13
-../Core/Src/GPS.c:202:6:StartGPS	1
+../Core/Src/GPS.c:204:6:StartGPS	1

@@ -100,11 +100,12 @@ extern volatile uint32_t current_addr_gsm;
 extern volatile uint32_t end_addr_disconnect;
 extern int is_disconnect;
 extern int is_using_flash;
+extern int is_pushing_data;
 extern Queue_GSM result_addr_queue;
 extern Queue_GSM mail_sent_queue;
 
 #define FLASH_START_ADDRESS 0x3000
-#define FLASH_END_ADDRESS   0x4000
+#define FLASH_END_ADDRESS   0x5000
 #define SECTOR_SIZE         0x1000 // Assuming sector size is 4 KB
 #define PAGE_SIZE           0x80
 

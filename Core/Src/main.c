@@ -67,7 +67,6 @@ osThreadId SpiFlashHandle;
 osThreadId GPSHandle;
 osThreadId RFIDHandle;
 osThreadId GSMHandle;
-osSemaphoreId ShiftLeftSemHandle;
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -156,11 +155,6 @@ int main(void)
   /* add mutexes, ... */
   /* USER CODE END RTOS_MUTEX */
 
-  /* Create the semaphores(s) */
-  /* definition and creation of ShiftLeftSem */
-  osSemaphoreDef(ShiftLeftSem);
-  ShiftLeftSemHandle = osSemaphoreCreate(osSemaphore(ShiftLeftSem), 1);
-
   /* USER CODE BEGIN RTOS_SEMAPHORES */
   /* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -175,31 +169,21 @@ int main(void)
 
   /* Create the thread(s) */
   /* definition and creation of defaultTask */
-//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 128);
-//  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
-//
-//  /* definition and creation of ControllingLED */
-//  osThreadDef(ControllingLED, StartControllingLED, osPriorityIdle, 0, 128);
-//  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
-//
-//  /* definition and creation of UART1 */
-//  osThreadDef(UART1, StartUART1, osPriorityIdle, 0, 128);
-//  UART1Handle = osThreadCreate(osThread(UART1), NULL);
-
-  /* definition and creation of SpiFlash */
-  osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1024);
-  SpiFlashHandle = osThreadCreate(osThread(SpiFlash), NULL);
-
   /* definition and creation of GPS */
   osThreadDef(GPS, StartGPS, osPriorityIdle, 0, 480);
   GPSHandle = osThreadCreate(osThread(GPS), NULL);
+  /* definition and creation of SpiFlash */
+  osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1560);
+  SpiFlashHandle = osThreadCreate(osThread(SpiFlash), NULL);
 
+
+//
 //  /* definition and creation of RFID */
 //  osThreadDef(RFID, StartRFID, osPriorityIdle, 0, 128);
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
   /* definition and creation of GSM */
-  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1024);
+  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1280);
   GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
@@ -442,21 +426,21 @@ static void MX_RTC_Init(void)
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = 0x0;
-  sTime.Minutes = 0x0;
-  sTime.Seconds = 0x0;
+  sTime.Hours = 0;
+  sTime.Minutes = 0;
+  sTime.Seconds = 0;
   sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
   sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
   {
     Error_Handler();
   }
   sDate.WeekDay = RTC_WEEKDAY_MONDAY;
   sDate.Month = RTC_MONTH_JANUARY;
-  sDate.Date = 0x1;
-  sDate.Year = 0x0;
+  sDate.Date = 1;
+  sDate.Year = 0;
 
-  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
   {
     Error_Handler();
   }
@@ -823,7 +807,6 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode

@@ -14,7 +14,7 @@
 #define APN_PASSWD									""
 #define APN_AUTHEN									0
 #define SERVICE_TYPE 								"TCP"
-#define IP_ADDRESS									"188.245.151.94"
+#define IP_ADDRESS									"104.237.9.196"
 #define REMOTE_PORT									5015
 #define CHECK_RESPONSE								"OK"
 //#define TERMINAL_REGISTRATION_DEMO 				"7E0100002D001234567891000300000000000000000041354D00000000000000000000000000000000003536373839312002D4C1413030303030CD7E"
@@ -99,6 +99,7 @@ int is_disconnect = 0;
 int is_using_flash = 0;
 int mode = 0;
 uint8_t count_shiftleft = 0;
+int is_pushing_data = 0;
 
 int is_flash_overflow = 0;
 volatile uint32_t start_addr_disconnect = 0;

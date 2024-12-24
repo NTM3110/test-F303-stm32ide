@@ -182,6 +182,8 @@ void getRMC(){
 //		display_rmc_data(&huart1);
 //		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 //		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
+		get_RTC_time_date(&rmc);
+
 		if(rmc.isValid == 1){
 			sendRMCDataToFlash(&rmc);
 			getRMC_time = 0;
@@ -218,13 +220,13 @@ void StartGPS(void const * argument)
 	rmc.date.Day = 0;
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
-	osMailQDef(FLASH_MailQ, 5, RMCSTRUCT);
+	osMailQDef(FLASH_MailQ, 12, RMCSTRUCT);
 	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
-//		Debug_printf("\n\n\n----------------------- Inside GPS ------------------------\n\n\n");
+		Debug_printf("\n\n----------------------- Inside GPS ------------------------\n\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 		osDelay(500);
 		getRMC();
