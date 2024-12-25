@@ -1172,93 +1172,108 @@ void StartGSM(void const * argument)
 	int is_set_uniqueID = 0;
 //	uint8_t output_location[256];
 //	char output_elapsed[128];
-	for(;;)
-	{
-//		Debug_printf("\n\n\n--------------------- INSIDE GSM -----------------------\n\n\n");
-		osDelay(300);
-		switch(process){
-			//Wait for SIM module to start
-			case 0:
-				countReconnect = 0;
-				uart_transmit_string(&huart1, (uint8_t *)"First CHECK\r\n");
-				isReady = first_check_SIM();
-				if(isReady) process++;
-				else{
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-					reboot_SIM_module();
-				}
-				break;
-			case 1:
-				// Check status of SIM. Wait until SIM is ready
-				uart_transmit_string(&huart1, (uint8_t *)"Check EVERYTHING READY\r\n");
-				osDelay(100);
-				int check_SIM = check_SIM_ready();
-				if(is_set_uniqueID == 0){
-					memcpy(reg_msg.terminal_phone_number, terminal_phone_number, sizeof(terminal_phone_number));
-					memcpy(location_info.terminal_phone_number, terminal_phone_number, sizeof(terminal_phone_number));
-					is_set_uniqueID = 1;
-				}
-
-				osDelay(150);
-				if (check_SIM == 0){
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module");
-					reboot_SIM_module();
-					process = 0;
-				}
-				else process++;
-				break;
-			case 2:
-				// Configure the PDP context
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Configure PDP context\r\n");
-				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-				SIM_UART_ReInitializeRxDMA();
-				configure_APN(1);
-				process++;
-				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-				SIM_UART_ReInitializeRxDMA();
-				break;
-			case 3: 
-				//Activate the PDP context.
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Activate PDP context\r\n");
-				int receive_activate = activate_context(1);
-				if(receive_activate){
-					getCurrentTime();
-					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP context successfully\n");
-					osDelay(200);
-					process++;
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-				}
-				else{
-					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP Context Failed\n");
-					int receive_deactivate = deactivate_context(1);
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					if (receive_deactivate) process = 1;
-					else {
-						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-						SIM_UART_ReInitializeRxDMA();
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-						reboot_SIM_module();
-						process = 0;
-					}
-				}
-				break;
-			case 4: 
-				//Open socket service
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: OPEN SOCKET SERVICE\r\n");
-				int received_res = open_socket_service(1, 0, 0, 0);
-				if(received_res){
-//					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server successfully\n");
-//					//int result_check_connect = check_socket_connection(1);
-//					if(result_check_connect == 1){
-//						countReconnect++;
-						process++;
+//	for(;;)
+//	{
+////		Debug_printf("\n\n\n--------------------- INSIDE GSM -----------------------\n\n\n");
+//		osDelay(300);
+//		switch(process){
+//			//Wait for SIM module to start
+//			case 0:
+//				countReconnect = 0;
+//				uart_transmit_string(&huart1, (uint8_t *)"First CHECK\r\n");
+//				isReady = first_check_SIM();
+//				if(isReady) process++;
+//				else{
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+//					reboot_SIM_module();
+//				}
+//				break;
+//			case 1:
+//				// Check status of SIM. Wait until SIM is ready
+//				uart_transmit_string(&huart1, (uint8_t *)"Check EVERYTHING READY\r\n");
+//				osDelay(100);
+//				int check_SIM = check_SIM_ready();
+//				if(is_set_uniqueID == 0){
+//					memcpy(reg_msg.terminal_phone_number, terminal_phone_number, sizeof(terminal_phone_number));
+//					memcpy(location_info.terminal_phone_number, terminal_phone_number, sizeof(terminal_phone_number));
+//					is_set_uniqueID = 1;
+//				}
+//
+//				osDelay(150);
+//				if (check_SIM == 0){
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module");
+//					reboot_SIM_module();
+//					process = 0;
+//				}
+//				else process++;
+//				break;
+//			case 2:
+//				// Configure the PDP context
+//				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Configure PDP context\r\n");
+//				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//				SIM_UART_ReInitializeRxDMA();
+//				configure_APN(1);
+//				process++;
+//				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//				SIM_UART_ReInitializeRxDMA();
+//				break;
+//			case 3:
+//				//Activate the PDP context.
+//				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Activate PDP context\r\n");
+//				int receive_activate = activate_context(1);
+//				if(receive_activate){
+//					getCurrentTime();
+//					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP context successfully\n");
+//					osDelay(200);
+//					process++;
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//				}
+//				else{
+//					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP Context Failed\n");
+//					int receive_deactivate = deactivate_context(1);
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//					if (receive_deactivate) process = 1;
+//					else {
+//						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//						SIM_UART_ReInitializeRxDMA();
+//						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+//						reboot_SIM_module();
+//						process = 0;
 //					}
+//				}
+//				break;
+//			case 4:
+//				//Open socket service
+//				uart_transmit_string(&huart1, (uint8_t *)"Inside process: OPEN SOCKET SERVICE\r\n");
+//				int received_res = open_socket_service(1, 0, 0, 0);
+//				if(received_res){
+////					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server successfully\n");
+////					//int result_check_connect = check_socket_connection(1);
+////					if(result_check_connect == 1){
+////						countReconnect++;
+//						process++;
+////					}
+////					else{
+////						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+////						SIM_UART_ReInitializeRxDMA();
+////						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+////						reboot_SIM_module();
+////						process = 0;
+////					}
+//				}
+//				else
+//				{
+//					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server Failed\n");
+//					int receive_deactivate = deactivate_context(1);
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//					if (receive_deactivate) process = 1;
 //					else{
 //						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 //						SIM_UART_ReInitializeRxDMA();
@@ -1266,311 +1281,304 @@ void StartGSM(void const * argument)
 //						reboot_SIM_module();
 //						process = 0;
 //					}
-				}
-				else
-				{
-					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server Failed\n");
-					int receive_deactivate = deactivate_context(1);
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					if (receive_deactivate) process = 1;
-					else{
-						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-						SIM_UART_ReInitializeRxDMA();
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-						reboot_SIM_module();
-						process = 0;
-					}
-				}
-				break;
-			case 5:
-				// REGISTER/LOGIN TO THE SERVER
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Register/Login to the server.\r\n");
-				int result_send_login = login_to_server(0,&reg_msg);
-				if(result_send_login){
-					process++;
-				}
-				else process = 8;
-				break;
-			case 6:
-				//CHECK LOGIN TO SERVER
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Register/Login\r\n");
-				int result_check_login = check_data_sent_to_server(0);
-				if(result_check_login){
-					receive_response("Check terminal register\n");
-					process++;
-				}
-				else process = 8;
-				break;
-			case 7:
-				is_in_sending = 1;
-				//Send Location
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Send Location\r\n");
-				int result_get_current = getCurrentTime();
-				if(result_get_current == 0){
-					process++;
-					break;
-				}
-				while(1){
-//					receiveRMCDataWithAddrGSM();
-					received_RMC = 1;
-					if(received_RMC == 1){
-						received_RMC = 0;
-						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
-						save_rmc_to_location_info(&location_info);
-						Debug_printf("Current stack address to be sent to the server: \n");
-						Debug_printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %08lx\n", current_addr_gsm);
-
-
-
-						HAL_TIM_Base_Start(&htim3);
-						__HAL_TIM_SET_COUNTER(&htim3, 0);
-//						if (osMutexAcquire(myMutex, osWaitForever) == osOK) {
-
-							uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
-
-							Debug_printf("\n\n --------------Thread GSM %p is running low on stack: %04d bytes remaining----------\n\n",GSMHandle, freeStack1);
-							result_final = processUploadDataToServer(&location_info);
-							if(result_final == 1){
-								countReconnect = 0;
-								uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
-								receive_response("Check location report\n");
-								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-								SIM_UART_ReInitializeRxDMA();
-
-								if(is_disconnect == 1 || is_using_flash == 1){
-									if(is_disconnect == 1){
-										end_addr_disconnect = current_addr_gsm;
-										in_getting_mail_stack = 1;
-										Debug_printf("End address of network outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
-									}
-
-									// TODO: THe duration of checking data sent is 20s. WHAT IF IN THAT DURATION THE ACTUAL ADDRESS HAS BEEN SHIFT LEFT
-									Debug_printf("\n-----------ADDING current address to the result queue----------\n");
-									enqueue_GSM(&result_addr_queue, current_addr_gsm);
-									if(is_keep_up == 0) num_in_mail_sent++;
-
-									for (int i = 0; i < result_addr_queue.size-1; i++) {
-										int idx = (result_addr_queue.front + i) % MAX_SIZE;
-										//0x4F00 is the end threshold address.
-										if(result_addr_queue.data[idx] != (FLASH_END_ADDRESS - 0x100) && in_getting_mail_stack == 1){
-											is_keep_up = 1;
-										}
-									}
-									if(is_keep_up == 1 && in_getting_mail_stack == 1){
-										int count_stack = 0;
-										for (int i = 0; i < result_addr_queue.size-1; i++) {
-											int idx = (result_addr_queue.front + i) % MAX_SIZE;
-											//0x4F00 is the end threshold address.
-											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
-												count_stack++;
-											}
-										}
-										for (int i = 0; i < result_addr_queue.size-1; i++) {
-											int idx = (result_addr_queue.front + i) % MAX_SIZE;
-											//0x4F00 is the end threshold address.
-											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
-												result_addr_queue.data[idx] -= 128 * count_stack;
-												count_stack--;
-											}
-										}
-										in_getting_mail_stack = 0;
-										Debug_printf("\n\n-------------- HAVE SENT ALL THE STACKED DATA IN MAIL QUEUE ----------------\n\n");
-									}
-
-									Debug_printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
-									printQueue_GSM(&result_addr_queue);
-
-									if(start_addr_disconnect >= end_addr_disconnect - 128 && checkAddrExistInQueue(end_addr_disconnect - 128, &result_addr_queue)){
-										Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
-										is_using_flash = 0;
-										clearQueue_GSM(&result_addr_queue);
-	//									clearQueue_GSM(&mail_sent_queue);
-										start_addr_disconnect = 0;
-										end_addr_disconnect = 0;
-										count_shiftleft = 0;
-										is_keep_up = 0;
-										Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
-										while(1){
-											Debug_printf("Receiving MAIL\n");
-											osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
-											if(status == osOK){
-												Debug_printf("Receiving MAIL For CLEARING: %08lx\n", receivedDataGSM.address);
-												// After processing, free the mail to clear it
-											}
-											else{
-												Debug_printf("Have cleared out all mail queue\n");
-												break;
-											}
-										}
-									}
-									else{
-										Debug_printf("\n\n------------------ USING FLASH TO PUSH TO SERVER -----------------\n\n");
-										is_using_flash = 1;
-									}
-									is_disconnect = 0;
-								}
-								is_pushing_data = 0;
-							}
-							else {
-								uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
-								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-								SIM_UART_ReInitializeRxDMA();
-								if(is_disconnect == 0){
-									if(is_using_flash == 0){
-										start_addr_disconnect = current_addr_gsm;
-										Debug_printf("Saving start address of connection outage: %08x\n", start_addr_disconnect);
-									}
-									is_disconnect = 1;
-	//								is_using_flash = 0;
-								}
-
-								//Reconnect then disconnect case: "HAVE NOT COMPLETE Get and send all the data from the last disconnect phase"
-								if(is_using_flash == 1){
-									if(is_keep_up){
-										Debug_printf("\n-----------------BEFORE update the result address data: GSM --------------\n");
-										printQueue_GSM(&result_addr_queue);
-										Debug_printf("\n--------------- Update the result address data: GSM --------------\n");
-
-
-										//Delete all the address that has been getting from FLASH.
-										for (int i = 0; i < result_addr_queue.size; i++) {
-											int idx = (result_addr_queue.front + i) % MAX_SIZE;
-											if(result_addr_queue.data[idx] < start_addr_disconnect){
-												Debug_printf("CURRENT INDEX TO CHECK DELETING: %08lx", result_addr_queue.data[idx]);
-		//										result_addr_queue.data[idx] -= 128 * count_shiftleft;
-												deleteMiddle_GSM(&result_addr_queue, idx);
-												i--;
-											}
-										}
-										//This is the current address when fetching simultaneously with FLASH.
-										int count_shiftleft_dub = count_shiftleft;
-										for (int i = 0; i < result_addr_queue.size; i++) {
-											int idx = (result_addr_queue.front + i) % MAX_SIZE;
-											if(result_addr_queue.data[idx] == FLASH_END_ADDRESS-0x100){
-												result_addr_queue.data[idx] -= 128 * count_shiftleft_dub;
-												count_shiftleft_dub -= 1;
-											}
-											else{
-												result_addr_queue.data[idx] -= 128 * count_shiftleft;
-											}
-										}
-
-									}
-									else{
-										int count_stack = 0;
-										for (int i = 0; i < result_addr_queue.size-1; i++) {
-											int idx = (result_addr_queue.front + i) % MAX_SIZE;
-											//0x4F00 is the end threshold address.
-											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
-												count_stack++;
-											}
-										}
-										for (int i = 0; i < result_addr_queue.size-1; i++) {
-											int idx = (result_addr_queue.front + i) % MAX_SIZE;
-											//0x4F00 is the end threshold address.
-											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
-												result_addr_queue.data[idx] -= 128 * count_stack;
-												count_stack--;
-											}
-										}
-									}
-									printQueue_GSM(&result_addr_queue);
-									start_addr_disconnect -= 128 * count_shiftleft;
-									if(start_addr_disconnect < 0x3000) start_addr_disconnect = 0x3000;
-									end_addr_disconnect -= 128 *count_shiftleft;
-
-									count_shiftleft = 0;
-
-									//Clear osMail
-
-
-									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
-									while(1){
-										Debug_printf("Receiving MAIL\n");
-										osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
-										if(status == osOK){
-											Debug_printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
-											if(is_keep_up == 0 && receivedDataGSM.address == 0x4F00){
-												for (int i = 0; i < num_in_mail_sent; i++) {
-													int idx = (result_addr_queue.rear - i + MAX_SIZE) % MAX_SIZE; // Calculate the index in reverse
-													result_addr_queue.data[idx] -= 128;
-												}
-											}
-											// After processing, free the mail to clear it
-										}
-										else{
-											Debug_printf("Have cleared out all mail queue\n");
-											break;
-										}
-									}
-									is_using_flash = 0;
-								}
-								is_pushing_data = 0;
-
-								if(result_final == 2){
-									Debug_printf("---------------------SIM ERROR ----------------------\n");
-									memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-									SIM_UART_ReInitializeRxDMA();
-									uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-									reboot_SIM_module();
-									process = 0;
-									break;
-
-								} else{
-									Debug_printf("\n--------------------SENDING ERROR -----------------------\n");
-									process++;
-									break;
-								}
-							}
-							int period = __HAL_TIM_GET_COUNTER(&htim3)/1000;
-							Debug_printf("\n--------------------Sending to SERVER takes %d -----------------------\n\n",period);
-							Debug_printf("\n--------------------END OF SENDING SERVER --------------------------\n\n");
-							osDelay(200);
-//							osMutexRelease(myMutex);
-//						}
-					}
-				}
-				Debug_printf("\n--------------------END OF CASE 7 --------------------------\n\n");
-				break;
-
-			case 8:
-				//Close CONNECTION
-				uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
-
-				Debug_printf("\n\n --------------Thread GSM %p is running low on stack: %04d bytes remaining----------\n\n",GSMHandle, freeStack1);
-				int result_close = close_connection(0);
-				if(result_close){
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					if(countReconnect > 20){
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-						reboot_SIM_module();
-						process = 0;
-					}
-					else{
-						uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
-						process = 4;
-					}
-				}
-				else{
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
-					reboot_SIM_module();
-					process = 0;
-				}
-				break;
-		}
-		if(is_in_sending == 0){
-			receiveRMCDataWithAddrGSM();
-		}
-		if(is_in_sending == 1){
-			is_in_sending = 0;
-		}
+//				}
+//				break;
+//			case 5:
+//				// REGISTER/LOGIN TO THE SERVER
+//				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Register/Login to the server.\r\n");
+//				int result_send_login = login_to_server(0,&reg_msg);
+//				if(result_send_login){
+//					process++;
+//				}
+//				else process = 8;
+//				break;
+//			case 6:
+//				//CHECK LOGIN TO SERVER
+//				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Register/Login\r\n");
+//				int result_check_login = check_data_sent_to_server(0);
+//				if(result_check_login){
+//					receive_response("Check terminal register\n");
+//					process++;
+//				}
+//				else process = 8;
+//				break;
+//			case 7:
+//				is_in_sending = 1;
+//				//Send Location
+//				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Send Location\r\n");
+//				int result_get_current = getCurrentTime();
+//				if(result_get_current == 0){
+//					process++;
+//					break;
+//				}
+//				while(1){
+////					receiveRMCDataWithAddrGSM();
+//					received_RMC = 1;
+//					if(received_RMC == 1){
+//						received_RMC = 0;
+//						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
+//						save_rmc_to_location_info(&location_info);
+//						Debug_printf("Current stack address to be sent to the server: \n");
+//						Debug_printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %08lx\n", current_addr_gsm);
+//
+//
+//
+//						HAL_TIM_Base_Start(&htim3);
+//						__HAL_TIM_SET_COUNTER(&htim3, 0);
+////						if (osMutexAcquire(myMutex, osWaitForever) == osOK) {
+//
+//							uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
+//
+//							Debug_printf("\n\n --------------Thread GSM %p is running low on stack: %04d bytes remaining----------\n\n",GSMHandle, freeStack1);
+//							result_final = processUploadDataToServer(&location_info);
+//							if(result_final == 1){
+//								countReconnect = 0;
+//								uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
+//								receive_response("Check location report\n");
+//								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//								SIM_UART_ReInitializeRxDMA();
+//
+//								if(is_disconnect == 1 || is_using_flash == 1){
+//									if(is_disconnect == 1){
+//										end_addr_disconnect = current_addr_gsm;
+//										in_getting_mail_stack = 1;
+//										Debug_printf("End address of network outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
+//									}
+//
+//									// TODO: THe duration of checking data sent is 20s. WHAT IF IN THAT DURATION THE ACTUAL ADDRESS HAS BEEN SHIFT LEFT
+//									Debug_printf("\n-----------ADDING current address to the result queue----------\n");
+//									enqueue_GSM(&result_addr_queue, current_addr_gsm);
+//									if(is_keep_up == 0) num_in_mail_sent++;
+//
+//									for (int i = 0; i < result_addr_queue.size-1; i++) {
+//										int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//										//0x4F00 is the end threshold address.
+//										if(result_addr_queue.data[idx] != (FLASH_END_ADDRESS - 0x100) && in_getting_mail_stack == 1){
+//											is_keep_up = 1;
+//										}
+//									}
+//									if(is_keep_up == 1 && in_getting_mail_stack == 1){
+//										int count_stack = 0;
+//										for (int i = 0; i < result_addr_queue.size-1; i++) {
+//											int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//											//0x4F00 is the end threshold address.
+//											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
+//												count_stack++;
+//											}
+//										}
+//										for (int i = 0; i < result_addr_queue.size-1; i++) {
+//											int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//											//0x4F00 is the end threshold address.
+//											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
+//												result_addr_queue.data[idx] -= 128 * count_stack;
+//												count_stack--;
+//											}
+//										}
+//										in_getting_mail_stack = 0;
+//										Debug_printf("\n\n-------------- HAVE SENT ALL THE STACKED DATA IN MAIL QUEUE ----------------\n\n");
+//									}
+//
+//									Debug_printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
+//									printQueue_GSM(&result_addr_queue);
+//
+//									if(start_addr_disconnect >= end_addr_disconnect - 128 && checkAddrExistInQueue(end_addr_disconnect - 128, &result_addr_queue)){
+//										Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
+//										is_using_flash = 0;
+//										clearQueue_GSM(&result_addr_queue);
+//	//									clearQueue_GSM(&mail_sent_queue);
+//										start_addr_disconnect = 0;
+//										end_addr_disconnect = 0;
+//										count_shiftleft = 0;
+//										is_keep_up = 0;
+//										Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+//										while(1){
+//											Debug_printf("Receiving MAIL\n");
+//											osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
+//											if(status == osOK){
+//												Debug_printf("Receiving MAIL For CLEARING: %08lx\n", receivedDataGSM.address);
+//												// After processing, free the mail to clear it
+//											}
+//											else{
+//												Debug_printf("Have cleared out all mail queue\n");
+//												break;
+//											}
+//										}
+//									}
+//									else{
+//										Debug_printf("\n\n------------------ USING FLASH TO PUSH TO SERVER -----------------\n\n");
+//										is_using_flash = 1;
+//									}
+//									is_disconnect = 0;
+//								}
+//								is_pushing_data = 0;
+//							}
+//							else {
+//								uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
+//								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//								SIM_UART_ReInitializeRxDMA();
+//								if(is_disconnect == 0){
+//									if(is_using_flash == 0){
+//										start_addr_disconnect = current_addr_gsm;
+//										Debug_printf("Saving start address of connection outage: %08x\n", start_addr_disconnect);
+//									}
+//									is_disconnect = 1;
+//	//								is_using_flash = 0;
+//								}
+//
+//								//Reconnect then disconnect case: "HAVE NOT COMPLETE Get and send all the data from the last disconnect phase"
+//								if(is_using_flash == 1){
+//									if(is_keep_up){
+//										Debug_printf("\n-----------------BEFORE update the result address data: GSM --------------\n");
+//										printQueue_GSM(&result_addr_queue);
+//										Debug_printf("\n--------------- Update the result address data: GSM --------------\n");
+//
+//
+//										//Delete all the address that has been getting from FLASH.
+//										for (int i = 0; i < result_addr_queue.size; i++) {
+//											int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//											if(result_addr_queue.data[idx] < start_addr_disconnect){
+//												Debug_printf("CURRENT INDEX TO CHECK DELETING: %08lx", result_addr_queue.data[idx]);
+//		//										result_addr_queue.data[idx] -= 128 * count_shiftleft;
+//												deleteMiddle_GSM(&result_addr_queue, idx);
+//												i--;
+//											}
+//										}
+//										//This is the current address when fetching simultaneously with FLASH.
+//										int count_shiftleft_dub = count_shiftleft;
+//										for (int i = 0; i < result_addr_queue.size; i++) {
+//											int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//											if(result_addr_queue.data[idx] == FLASH_END_ADDRESS-0x100){
+//												result_addr_queue.data[idx] -= 128 * count_shiftleft_dub;
+//												count_shiftleft_dub -= 1;
+//											}
+//											else{
+//												result_addr_queue.data[idx] -= 128 * count_shiftleft;
+//											}
+//										}
+//
+//									}
+//									else{
+//										int count_stack = 0;
+//										for (int i = 0; i < result_addr_queue.size-1; i++) {
+//											int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//											//0x4F00 is the end threshold address.
+//											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
+//												count_stack++;
+//											}
+//										}
+//										for (int i = 0; i < result_addr_queue.size-1; i++) {
+//											int idx = (result_addr_queue.front + i) % MAX_SIZE;
+//											//0x4F00 is the end threshold address.
+//											if(result_addr_queue.data[idx] == (FLASH_END_ADDRESS - 0x100) && result_addr_queue.data[idx+1] == (FLASH_END_ADDRESS - 0x100)){
+//												result_addr_queue.data[idx] -= 128 * count_stack;
+//												count_stack--;
+//											}
+//										}
+//									}
+//									printQueue_GSM(&result_addr_queue);
+//									start_addr_disconnect -= 128 * count_shiftleft;
+//									if(start_addr_disconnect < 0x3000) start_addr_disconnect = 0x3000;
+//									end_addr_disconnect -= 128 *count_shiftleft;
+//
+//									count_shiftleft = 0;
+//
+//									//Clear osMail
+//
+//
+//									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+//									while(1){
+//										Debug_printf("Receiving MAIL\n");
+//										osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
+//										if(status == osOK){
+//											Debug_printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
+//											if(is_keep_up == 0 && receivedDataGSM.address == 0x4F00){
+//												for (int i = 0; i < num_in_mail_sent; i++) {
+//													int idx = (result_addr_queue.rear - i + MAX_SIZE) % MAX_SIZE; // Calculate the index in reverse
+//													result_addr_queue.data[idx] -= 128;
+//												}
+//											}
+//											// After processing, free the mail to clear it
+//										}
+//										else{
+//											Debug_printf("Have cleared out all mail queue\n");
+//											break;
+//										}
+//									}
+//									is_using_flash = 0;
+//								}
+//								is_pushing_data = 0;
+//
+//								if(result_final == 2){
+//									Debug_printf("---------------------SIM ERROR ----------------------\n");
+//									memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//									SIM_UART_ReInitializeRxDMA();
+//									uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+//									reboot_SIM_module();
+//									process = 0;
+//									break;
+//
+//								} else{
+//									Debug_printf("\n--------------------SENDING ERROR -----------------------\n");
+//									process++;
+//									break;
+//								}
+//							}
+//							int period = __HAL_TIM_GET_COUNTER(&htim3)/1000;
+//							Debug_printf("\n--------------------Sending to SERVER takes %d -----------------------\n\n",period);
+//							Debug_printf("\n--------------------END OF SENDING SERVER --------------------------\n\n");
+//							osDelay(200);
+////							osMutexRelease(myMutex);
+////						}
+//					}
+//				}
+//				Debug_printf("\n--------------------END OF CASE 7 --------------------------\n\n");
+//				break;
+//
+//			case 8:
+//				//Close CONNECTION
+//				uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
+//
+//				Debug_printf("\n\n --------------Thread GSM %p is running low on stack: %04d bytes remaining----------\n\n",GSMHandle, freeStack1);
+//				int result_close = close_connection(0);
+//				if(result_close){
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//					if(countReconnect > 20){
+//						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+//						reboot_SIM_module();
+//						process = 0;
+//					}
+//					else{
+//						uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
+//						process = 4;
+//					}
+//				}
+//				else{
+//					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+//					SIM_UART_ReInitializeRxDMA();
+//					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+//					reboot_SIM_module();
+//					process = 0;
+//				}
+//				break;
+//		}
+//		if(is_in_sending == 0){
+//			receiveRMCDataWithAddrGSM();
+//		}
+//		if(is_in_sending == 1){
+//			is_in_sending = 0;
+//		}
+	while(1){
 		Debug_printf("\nHello from GSM\n");
 		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
-		osDelay(200);
+		receive_response("Check auto log\n");
+		send_AT_command(FIRST_CHECK);
+		while(strstr((char *) response, CHECK_RESPONSE) != NULL){
+			receive_response("First check SIM MODULE\n");
+		}
+		send_AT_command(CONFIGURE_CS_SERVICE);
+
+		osDelay(1000);
   }
   /* USER CODE END StartGSM */
 }

@@ -35,4 +35,4 @@
 ../Core/Src/GSM.c:1026:5:getCurrentTime	16	static
 ../Core/Src/GSM.c:1050:6:receiveRMCDataWithAddrGSM	120	static
 ../Core/Src/GSM.c:1099:5:processUploadDataToServer	24	static
-../Core/Src/GSM.c:1149:6:StartGSM	176	static
+../Core/Src/GSM.c:1149:6:StartGSM	32	static
