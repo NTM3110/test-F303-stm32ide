@@ -27,7 +27,7 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+osMutexId_t myMutex;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -60,13 +60,55 @@ DMA_HandleTypeDef hdma_usart1_rx;
 DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart3_rx;
 
-osThreadId defaultTaskHandle;
-osThreadId ControllingLEDHandle;
-osThreadId UART1Handle;
-osThreadId SpiFlashHandle;
-osThreadId GPSHandle;
-osThreadId RFIDHandle;
-osThreadId GSMHandle;
+/* Definitions for defaultTask */
+osThreadId_t defaultTaskHandle;
+const osThreadAttr_t defaultTask_attributes = {
+  .name = "defaultTask",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
+};
+/* Definitions for ControllingLED */
+osThreadId_t ControllingLEDHandle;
+const osThreadAttr_t ControllingLED_attributes = {
+  .name = "ControllingLED",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for UART1 */
+osThreadId_t UART1Handle;
+const osThreadAttr_t UART1_attributes = {
+  .name = "UART1",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for SpiFlash */
+osThreadId_t SpiFlashHandle;
+const osThreadAttr_t SpiFlash_attributes = {
+  .name = "SpiFlash",
+  .stack_size = 1664 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for GPS */
+osThreadId_t GPSHandle;
+const osThreadAttr_t GPS_attributes = {
+  .name = "GPS",
+  .stack_size = 480 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for RFID */
+osThreadId_t RFIDHandle;
+const osThreadAttr_t RFID_attributes = {
+  .name = "RFID",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for GSM */
+osThreadId_t GSMHandle;
+const osThreadAttr_t GSM_attributes = {
+  .name = "GSM",
+  .stack_size = 1408 * 4,
+  .priority = (osPriority_t) osPriorityLow,
+};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -84,13 +126,13 @@ static void MX_TIM3_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_SPI2_Init(void);
-void StartDefaultTask(void const * argument);
-void StartControllingLED(void const * argument);
-void StartUART1(void const * argument);
-void StartSpiFlash(void const * argument);
-void StartGPS(void const * argument);
-void StartRFID(void const * argument);
-void StartGSM(void const * argument);
+void StartDefaultTask(void *argument);
+void StartControllingLED(void *argument);
+void StartUART1(void *argument);
+void StartSpiFlash(void *argument);
+void StartGPS(void *argument);
+void StartRFID(void *argument);
+void StartGSM(void *argument);
 
 /* USER CODE BEGIN PFP */
 void Delay_1s(void)
@@ -151,8 +193,12 @@ int main(void)
 
   /* USER CODE END 2 */
 
+  /* Init scheduler */
+  osKernelInitialize();
+
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
+//  osMutexId_t myMutex;
   /* USER CODE END RTOS_MUTEX */
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
@@ -168,27 +214,36 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* definition and creation of defaultTask */
-  /* definition and creation of GPS */
-  osThreadDef(GPS, StartGPS, osPriorityIdle, 0, 480);
-  GPSHandle = osThreadCreate(osThread(GPS), NULL);
-  /* definition and creation of SpiFlash */
-  osThreadDef(SpiFlash, StartSpiFlash, osPriorityIdle, 0, 1560);
-  SpiFlashHandle = osThreadCreate(osThread(SpiFlash), NULL);
-
-
+//  /* creation of defaultTask */
+//  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 //
-//  /* definition and creation of RFID */
-//  osThreadDef(RFID, StartRFID, osPriorityIdle, 0, 128);
-//  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
+//  /* creation of ControllingLED */
+//  ControllingLEDHandle = osThreadNew(StartControllingLED, NULL, &ControllingLED_attributes);
+//
+//  /* creation of UART1 */
+//  UART1Handle = osThreadNew(StartUART1, NULL, &UART1_attributes);
 
-  /* definition and creation of GSM */
-  osThreadDef(GSM, StartGSM, osPriorityIdle, 0, 1280);
-  GSMHandle = osThreadCreate(osThread(GSM), NULL);
+//  /* creation of GPS */
+//  GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
+//
+//  /* creation of SpiFlash */
+//  SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
+
+
+
+//  /* creation of RFID */
+//  RFIDHandle = osThreadNew(StartRFID, NULL, &RFID_attributes);
+
+  /* creation of GSM */
+  GSMHandle = osThreadNew(StartGSM, NULL, &GSM_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
+
+  /* USER CODE BEGIN RTOS_EVENTS */
+  /* add events, ... */
+  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -797,7 +852,7 @@ static void MX_GPIO_Init(void)
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void const * argument)
+void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
@@ -807,6 +862,7 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
+
 
 /**
   * @brief  Period elapsed callback in non blocking mode

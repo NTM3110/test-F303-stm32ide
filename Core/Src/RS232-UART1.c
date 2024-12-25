@@ -9,7 +9,7 @@
 
 uint16_t j,k,cnt,check;
 RingBufferDmaU8_TypeDef rs232Ext2RxDMARing;
-osMailQId tax_MailQId;
+osMessageQueueId_t tax_MailQId;
 uint8_t taxBuffer[128];
 uint8_t gsvSentence[2048];
 TAX_MAIL_STRUCT taxMailStruct;
@@ -67,14 +67,7 @@ void rs232Ext2_InitializeRxDMA(void)// ham khoi tao lai DMA
 }
 
 void sendTaxData(uint8_t *arrayData, uint32_t size) {
-    TAX_MAIL_STRUCT *mail = (TAX_MAIL_STRUCT *)osMailAlloc(tax_MailQId, osWaitForever); // Allocate mail
-    if (mail != NULL) {
-        // Copy data into the mail structure (up to ARRAY_SIZE)
-        for (int i = 0; i < size ; i++) {
-            mail->data[i] = arrayData[i];
-        }
-        osMailPut(tax_MailQId, mail); // Put mail in queue
-    }
+	osMessageQueuePut(tax_MailQId, arrayData, 0, osWaitForever);// Put mail in queue
 }
 
 void Bill_Decode(){
@@ -177,8 +170,7 @@ void Bill_Decode(){
 
 void StartUART1(void const * argument)
 {
-	osMailQDef(Tax_MailQ, 10, TAX_MAIL_STRUCT); 
-	tax_MailQId = osMailCreate(osMailQ(Tax_MailQ), NULL);
+	tax_MailQId = osMessageQueueNew(5, sizeof(TAX_MAIL_STRUCT), NULL);
 	HAL_UART_Transmit(&huart1, (uint8_t*) "STARTING UART1", strlen("STARTING UART1"), 1000);
   /* USER CODE BEGIN StartUART1 */
 	RingBufferDmaU8_initUSARTRx(&rs232Ext2RxDMARing, &huart1, gsvSentence, READLOG_BLOCK_BUFFER_LENGHT);

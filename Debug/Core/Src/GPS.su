@@ -3,6 +3,6 @@
 ../Core/Src/GPS.c:53:6:display_rmc_data	16	static
 ../Core/Src/GPS.c:70:8:convertToEpoch	48	static
 ../Core/Src/GPS.c:88:6:parse_rmc	48	static
-../Core/Src/GPS.c:148:6:sendRMCDataToFlash	16	static
-../Core/Src/GPS.c:158:6:getRMC	16	static
-../Core/Src/GPS.c:204:6:StartGPS	24	static
+../Core/Src/GPS.c:148:6:sendRMCDataToFlash	8	static
+../Core/Src/GPS.c:161:6:getRMC	16	static
+../Core/Src/GPS.c:208:6:StartGPS	8	static

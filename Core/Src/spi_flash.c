@@ -12,9 +12,6 @@
 
 #include "Queue_GSM.h"
 
-
-uint8_t current_sector_buffer[SECTOR_SIZE];
-uint8_t next_page_buffer[PAGE_SIZE];
 uint32_t addr_to_get_from_FLASH;
 
 
@@ -33,6 +30,8 @@ uint8_t rmcBufferDemo[128];
 
 RMCSTRUCT rmc_flash;
 GSM_MAIL_STRUCT mail_gsm;
+TAX_MAIL_STRUCT *receivedDataTax;
+RMCSTRUCT receivedDataRMCFLASH;
 
 int W25_ChipErase(void)
 {
@@ -228,6 +227,8 @@ void UpdatePageAddress(uint8_t *page, uint32_t new_address) {
 }
 
 int W25_ShiftLeftFlashDataByPage(void) {
+	uint8_t current_sector_buffer[SECTOR_SIZE];
+	uint8_t next_page_buffer[PAGE_SIZE];
     uint32_t current_sector_start = FLASH_START_ADDRESS;
 
     Debug_printf("\n\n ------------------------------ IN SHIFT LEFT: ----------------------------\n\n");
@@ -324,17 +325,15 @@ void receiveTaxData(void) {
 //	uint8_t output_buffer[200];
 	int k = 0;
 	int j;
-    osEvent evt = osMailGet(tax_MailQId, 2000); // Wait for mail
-    if (evt.status == osEventMail) {
-		TAX_MAIL_STRUCT *receivedData = (TAX_MAIL_STRUCT *)evt.value.p;
+	osStatus_t status = osMessageQueueGet(tax_MailQId, receivedDataTax, NULL, 3000); // Wait for mail
+	if(status == osOK){
 		uart_transmit_string(&huart1, (uint8_t*)"Received  TAX Data: \n");
 		// Process received data (e.g., display, log, or store data)
-		uart_transmit_string(&huart1, receivedData->data);
+		uart_transmit_string(&huart1, receivedDataTax->data);
 		for(size_t i = 0; i < 128; i++){
-			taxBufferDemo[i] = receivedData->data[i];
-			if(receivedData->data[i] != 0x00 && receivedData->data[i+1] == 0x00) k = i;
+			taxBufferDemo[i] = receivedDataTax->data[i];
+			if(receivedDataTax->data[i] != 0x00 && receivedDataTax->data[i+1] == 0x00) k = i;
 		}
-		osMailFree(tax_MailQId, receivedData); // Free memory after use
 		char addr_out[10];
 		sprintf(addr_out, "%08"PRIx32, address_tax);
 		HAL_UART_Transmit(&huart1, (uint8_t*) addr_out, 8, 1000);
@@ -492,11 +491,7 @@ void saveRMC(){
 void sendRMCDataWithAddrToGSM(GSM_MAIL_STRUCT *mail_data){
 	if(mail_data->rmc.date.Yr >= 24){
 		HAL_UART_Transmit(&huart1, (uint8_t*) "\n\n\nSENDING RMC with Addr TO GSM\n\n",  strlen("\n\n\nSENDING RMC with Addr TO GSM\n\n") , HAL_MAX_DELAY);
-		GSM_MAIL_STRUCT *mail = (GSM_MAIL_STRUCT *)osMailAlloc(RMC_MailQGSMId, osWaitForever); // Allocate memory for mail
-		if (mail != NULL) {
-			*mail = *mail_data; // Copy data into allocated memory
-			osMailPut(RMC_MailQGSMId, mail); // Put message in queue
-		}
+		osMessageQueuePut(RMC_MailQGSMId, mail_data, 0, 1000);
 	}
 }
 
@@ -577,24 +572,23 @@ void receiveRMCDataFromGPS(void) {
 
 	// Wait until there are at least 10 messages in the queue
 //	Debug_printf("Inside Receiving RMC Data SPI FLASH\n");
-	osEvent evt = osMailGet(RMC_MailQFLASHId, osWaitForever); // Wait for mail
-	if(evt.status == osEventMail){
+	osStatus_t status = osMessageQueueGet(RMC_MailQFLASHId, &receivedDataRMCFLASH, NULL, 1000); // Wait for mail
+	if(status == osOK){
 		uart_transmit_string(&huart1, (uint8_t*)"\nReceived  RMC Data SPI FLASH: \n");
-		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
 		//Sending DATA to GSM
-		rmc_flash.lcation.latitude = receivedData->lcation.latitude;
-		rmc_flash.lcation.longitude = receivedData->lcation.longitude;
-		rmc_flash.speed = receivedData->speed;
-		rmc_flash.course = receivedData->course;
-		rmc_flash.lcation.NS = receivedData->lcation.NS;
-		rmc_flash.lcation.EW = receivedData->lcation.EW;
-		rmc_flash.isValid = receivedData->isValid;
-		rmc_flash.tim.hour = receivedData->tim.hour;
-		rmc_flash.tim.min = receivedData->tim.min;
-		rmc_flash.tim.sec = receivedData->tim.sec;
-		rmc_flash.date.Yr = receivedData->date.Yr;
-		rmc_flash.date.Mon = receivedData->date.Mon;
-		rmc_flash.date.Day = receivedData->date.Day;
+		rmc_flash.lcation.latitude = receivedDataRMCFLASH.lcation.latitude;
+		rmc_flash.lcation.longitude = receivedDataRMCFLASH.lcation.longitude;
+		rmc_flash.speed = receivedDataRMCFLASH.speed;
+		rmc_flash.course = receivedDataRMCFLASH.course;
+		rmc_flash.lcation.NS = receivedDataRMCFLASH.lcation.NS;
+		rmc_flash.lcation.EW = receivedDataRMCFLASH.lcation.EW;
+		rmc_flash.isValid = receivedDataRMCFLASH.isValid;
+		rmc_flash.tim.hour = receivedDataRMCFLASH.tim.hour;
+		rmc_flash.tim.min = receivedDataRMCFLASH.tim.min;
+		rmc_flash.tim.sec = receivedDataRMCFLASH.tim.sec;
+		rmc_flash.date.Yr = receivedDataRMCFLASH.date.Yr;
+		rmc_flash.date.Mon = receivedDataRMCFLASH.date.Mon;
+		rmc_flash.date.Day = receivedDataRMCFLASH.date.Day;
 
 		if(rmc_flash.date.Yr >= 24){
 			countRMCReceived++;
@@ -629,11 +623,12 @@ void receiveRMCDataFromGPS(void) {
 				mail_gsm.rmc.date.Mon = rmc_flash.date.Mon;
 				mail_gsm.rmc.date.Day = rmc_flash.date.Day;
 				mail_gsm.address = current_addr;
+				Debug_printf("-------------------SENDING CURRENT ADDR DATA: %08lx----------------------", mail_gsm.address);
 				sendRMCDataWithAddrToGSM(&mail_gsm);
 				countRMCReceived = 0;
 			}
 			else{
-
+				Debug_printf("\n\n ---------------------------- There is no mail in SPI FLASH FROM GPS ------------------\n\n");
 				/*
 				 * CASE 1: Sent the data from flash successfully so move to the next page.
 				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
@@ -655,8 +650,10 @@ void receiveRMCDataFromGPS(void) {
 				//is_over_flow = 0;
 			}
 		}
-		osMailFree(RMC_MailQFLASHId, receivedData);
 		// Free memory after use
+	}
+	else{
+		Debug_printf("\n\n-------------------------- RECEIVED MAIL FROM GPS FAILED: %d ------------------------\n\n",status);
 	}
 }
 
@@ -668,32 +665,35 @@ void StartSpiFlash(void const * argument)
 	Debug_printf("\n\n\n------------------------------- STARTING SPI FLASH ------------------------------\n\n\n");
 	current_addr = address_rmc;
 
-	osMailQDef(GSM_MailQ, 128, GSM_MAIL_STRUCT);
-	RMC_MailQGSMId = osMailCreate(osMailQ(GSM_MailQ), NULL);
-
-//	result_address = 0x3280;
+	RMC_MailQGSMId = osMessageQueueNew(64, sizeof(GSM_MAIL_STRUCT), NULL);
+	myMutex = osMutexNew(NULL);  // NULL means default attributes
+	if (myMutex == NULL) {
+		Debug_printf("\n\n ----------------- Failed to create mutex -----------------\n\n");
+	}
 
 	for(;;){
-		if(!is_pushing_data){
-			osDelay(125);
-			uart_transmit_string(&huart1, (uint8_t*) "\n\n--------------------- INSIDE SPI FLASH ------------------------\n\n");
-	//		W25_Reset();
-	//		W25_ReadJedecID();
-	//		W25_Reset();
-	//		W25_ReadData(current_addr, flashBufferRMCReceived, 128);
-	//		char spi_flash_data_intro[] = "Flash DATA received: ";
-	//		HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
-	//		HAL_UART_Transmit(&huart1, flashBufferRMCReceived, sizeof(flashBufferRMCReceived), 1000);
-			Debug_printf("\n------------- Current address FLASH: %08lx -------------\n", current_addr);
-			//receiveTaxData();
-			receiveRMCDataFromGPS();
-			uart_transmit_string(&huart1,(uint8_t*) "\n\n");
-			osDelay(125);
-		}
-		else{
-			//Debug_printf("\n-----------PUSHING DATA TO SERVER --------------\n");
-			osDelay(20);
-		}
+//		if(osMutexAcquire(myMutex, osWaitForever) == osOK) {
+
+		uint32_t freeStack2 = osThreadGetStackSpace(SpiFlashHandle);
+
+		Debug_printf("\n\n --------------Thread SPI FLASH %p is running low on stack: %04d bytes remaining----------\n\n", SpiFlashHandle, freeStack2);
+		osDelay(125);
+		uart_transmit_string(&huart1, (uint8_t*) "\n\n--------------------- INSIDE SPI FLASH ------------------------\n\n");
+		W25_Reset();
+		W25_ReadJedecID();
+		W25_Reset();
+		W25_ReadData(current_addr, flashBufferRMCReceived, 128);
+		char spi_flash_data_intro[] = "Flash DATA received: ";
+		HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
+		HAL_UART_Transmit(&huart1, flashBufferRMCReceived, sizeof(flashBufferRMCReceived), 1000);
+		Debug_printf("\n------------- Current address FLASH: %08lx -------------\n", current_addr);
+		//receiveTaxData();
+		receiveRMCDataFromGPS();
+		uart_transmit_string(&huart1,(uint8_t*) "\n\n");
+		osDelay(125);
+//			osMutexRelease(myMutex);
+//		}
+//		osDelay(100);
   }
   /* USER CODE END StartSpiFlash */
 }

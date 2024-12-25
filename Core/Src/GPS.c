@@ -17,7 +17,7 @@ RingBufferDmaU8_TypeDef GPSRxDMARing;
 
 uint8_t gpsSentence[GPS_STACK_SIZE];
 
-osMailQId RMC_MailQFLASHId; // Mail queue identifier FLASH
+osMessageQueueId_t RMC_MailQFLASHId; // Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
 #define GMT 		000
@@ -54,7 +54,7 @@ void display_rmc_data(UART_HandleTypeDef *huart) {
 
     Debug_printf("Time: %02d:%02d:%02d\r\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 
-    Debug_printf("Date: %02d/%02d/%04d\r\n", rmc.date.Day, rmc.date.Mon, rmc.date.Yr);
+    Debug_printf("Date: %02d/%02d/20%02d\r\n", rmc.date.Day, rmc.date.Mon, rmc.date.Yr);
 	
     Debug_printf("Latitude: %.6f %c\r\n", rmc.lcation.latitude, rmc.lcation.NS);
 
@@ -147,11 +147,14 @@ void parse_rmc(uint8_t *rmc_sentence) {
 
 void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
 	HAL_UART_Transmit(&huart1, (uint8_t*) "SENDING RMC TO FLASH\n",  strlen("SENDING RMC\n") , HAL_MAX_DELAY);
-    RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQFLASHId, osWaitForever); // Allocate memory for mail
-    if (mail != NULL) {
-        *mail = *rmcData; // Copy data into allocated memory
-        osMailPut(RMC_MailQFLASHId, mail); // Put message in queue
-    }
+	osStatus_t status = osMessageQueuePut(RMC_MailQFLASHId, rmcData, 0, 1000);
+	if (status != osOK) {
+	   Debug_printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
+	}
+	else{
+		Debug_printf("\n\n-------------------------SEND message successfullly at GPS: %d ------------------------\n\n", status);
+
+	}
 }
 
 
@@ -185,6 +188,7 @@ void getRMC(){
 		get_RTC_time_date(&rmc);
 
 		if(rmc.isValid == 1){
+			Debug_printf("\n\n------------ Sending RMC at GPS------------\n\n");
 			sendRMCDataToFlash(&rmc);
 			getRMC_time = 0;
 		}
@@ -203,9 +207,9 @@ void getRMC(){
 
 void StartGPS(void const * argument)
 {
-	HAL_UART_Transmit(&huart1,(uint8_t*) "STARTING GPS", strlen("STARTING GPS"), 1000);
+	Debug_printf("\n\n--------------------STARTING GPS ---------------------\n\n");
 	/* USER CODE BEGIN StartGPS */
-	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
+
 //	/* Infinite loop */
 	rmc.tim.hour = 0;
 	rmc.tim.min = 0;
@@ -220,12 +224,23 @@ void StartGPS(void const * argument)
 	rmc.date.Day = 0;
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
-	osMailQDef(FLASH_MailQ, 12, RMCSTRUCT);
-	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 
+	Debug_printf("\n\n --------------------Creating a MESSAGE QUEUE --------------------- \n\n");
+	RMC_MailQFLASHId = osMessageQueueNew(3, sizeof(RMCSTRUCT), NULL);
+	if (RMC_MailQFLASHId == NULL) {
+	    Debug_printf("\n\n --------------------Failed to create message queue ----------------\n\n");
+	}
+	else{
+		Debug_printf("\n\n --------------------Create MESSAGE QUEUE FROM GPS TO FLASH SUCCESSFULLY: %d ----------------\n\n", sizeof(RMC_MailQFLASHId));
+	}
+	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
+//		osThreadId_t thread1 = osThreadGetId();
+//		uint32_t freeStack1 = osThreadGetStackSpace(thread1);
+//
+//		Debug_printf("Thread GPS %p is running low on stack: %04d bytes remaining\n", thread1, freeStack1);
 		Debug_printf("\n\n----------------------- Inside GPS ------------------------\n\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 		osDelay(500);

@@ -1,6 +1,6 @@
 ../Core/Src/RS232-UART1.c:27:6:RingBufferDmaU8_initUSARTRx	4	static
 ../Core/Src/RS232-UART1.c:40:10:RingBufferDmaU8_available	0	static
 ../Core/Src/RS232-UART1.c:57:6:rs232Ext2_InitializeRxDMA	8	static
-../Core/Src/RS232-UART1.c:69:6:sendTaxData	16	static
-../Core/Src/RS232-UART1.c:80:6:Bill_Decode	80	static
-../Core/Src/RS232-UART1.c:178:6:StartUART1	24	static
+../Core/Src/RS232-UART1.c:69:6:sendTaxData	0	static
+../Core/Src/RS232-UART1.c:73:6:Bill_Decode	80	static
+../Core/Src/RS232-UART1.c:171:6:StartUART1	8	static
