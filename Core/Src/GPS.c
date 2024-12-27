@@ -180,8 +180,8 @@ void getRMC(){
 		rmc_str[i] = 0;
 	}
 	if(isRMCExist == 1){
-//		parse_rmc(rmc_str);
-//		display_rmc_data(&huart1);
+		parse_rmc(rmc_str);
+		display_rmc_data(&huart1);
 //		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 //		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 		get_RTC_time_date(&rmc);
@@ -211,19 +211,19 @@ void StartGPS(void const * argument)
 	/* USER CODE BEGIN StartGPS */
 
 //	/* Infinite loop */
-	rmc.tim.hour = 0;
-	rmc.tim.min = 0;
-	rmc.tim.sec = 0;
-	rmc.lcation.latitude = 20.998022;
-	rmc.lcation.longitude = 105.794756;
-	rmc.speed = 22.4;
-	rmc.course = 30.5;
-	rmc.lcation.NS = 'N';
-	rmc.lcation.EW = 'E';
-	rmc.isValid = 1;
-	rmc.date.Day = 0;
-	rmc.date.Mon = 0;
-	rmc.date.Yr = 0;
+//	rmc.tim.hour = 0;
+//	rmc.tim.min = 0;
+//	rmc.tim.sec = 0;
+//	rmc.lcation.latitude = 20.998022;
+//	rmc.lcation.longitude = 105.794756;
+//	rmc.speed = 22.4;
+//	rmc.course = 30.5;
+//	rmc.lcation.NS = 'N';
+//	rmc.lcation.EW = 'E';
+//	rmc.isValid = 1;
+//	rmc.date.Day = 0;
+//	rmc.date.Mon = 0;
+//	rmc.date.Yr = 0;
 
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
