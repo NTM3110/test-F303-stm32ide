@@ -72,42 +72,42 @@ osThreadId_t ControllingLEDHandle;
 const osThreadAttr_t ControllingLED_attributes = {
   .name = "ControllingLED",
   .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for UART1 */
 osThreadId_t UART1Handle;
 const osThreadAttr_t UART1_attributes = {
   .name = "UART1",
   .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for SpiFlash */
 osThreadId_t SpiFlashHandle;
 const osThreadAttr_t SpiFlash_attributes = {
   .name = "SpiFlash",
-  .stack_size = 1664 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 2072 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for GPS */
 osThreadId_t GPSHandle;
 const osThreadAttr_t GPS_attributes = {
   .name = "GPS",
   .stack_size = 480 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for RFID */
 osThreadId_t RFIDHandle;
 const osThreadAttr_t RFID_attributes = {
   .name = "RFID",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for GSM */
 osThreadId_t GSMHandle;
 const osThreadAttr_t GSM_attributes = {
   .name = "GSM",
-  .stack_size = 1408 * 4,
-  .priority = (osPriority_t) osPriorityLow,
+  .stack_size = 1024 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
 
@@ -223,11 +223,11 @@ int main(void)
 //  /* creation of UART1 */
 //  UART1Handle = osThreadNew(StartUART1, NULL, &UART1_attributes);
 
-//  /* creation of GPS */
-//  GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
-//
-//  /* creation of SpiFlash */
-//  SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
+  /* creation of GPS */
+  GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
+
+  /* creation of SpiFlash */
+  SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
 
 
 

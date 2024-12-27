@@ -13,7 +13,9 @@
 #include "Queue_GSM.h"
 
 uint32_t addr_to_get_from_FLASH;
-
+osMessageQueueId_t tax_MailQId;
+osMessageQueueId_t RMC_MailQFLASHId;
+osMessageQueueId_t RMC_MailQGSMId;
 
 extern UART_HandleTypeDef huart1;
 uint32_t address_tax = 0x1000;
@@ -605,7 +607,7 @@ void receiveRMCDataFromGPS(void) {
 
 			format_rmc_data(&rmc_flash,(char*) rmcBufferDemo, 128);
 
-			if(countRMCReceived == 9){
+			if(countRMCReceived == 29){
 
 				saveRMC();
 				Debug_printf("---------------------Sending the current data----------------");
@@ -633,7 +635,7 @@ void receiveRMCDataFromGPS(void) {
 				 * CASE 1: Sent the data from flash successfully so move to the next page.
 				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
 				 */
-				if(is_using_flash == 1 && is_disconnect == 0){
+				if(is_using_flash == 1 && is_disconnect == 0 && is_keep_up == 1){
 					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue) && (start_addr_disconnect <= (FLASH_END_ADDRESS - 0x100))){
 						Debug_printf("\n-------SKIPPING address cause it was sent already: %08lx--------\n", start_addr_disconnect);
 						start_addr_disconnect +=128;
@@ -665,11 +667,21 @@ void StartSpiFlash(void const * argument)
 	Debug_printf("\n\n\n------------------------------- STARTING SPI FLASH ------------------------------\n\n\n");
 	current_addr = address_rmc;
 
+
+	RMC_MailQFLASHId = osMessageQueueNew(3, sizeof(RMCSTRUCT), NULL);
+	if (RMC_MailQFLASHId == NULL) {
+		Debug_printf("\n\n --------------------Failed to create message queue ----------------\n\n");
+	}
+	else{
+		Debug_printf("\n\n --------------------Create MESSAGE QUEUE FROM GPS TO FLASH SUCCESSFULLY: %d ----------------\n\n", sizeof(RMC_MailQFLASHId));
+	}
+
 	RMC_MailQGSMId = osMessageQueueNew(64, sizeof(GSM_MAIL_STRUCT), NULL);
 	myMutex = osMutexNew(NULL);  // NULL means default attributes
 	if (myMutex == NULL) {
 		Debug_printf("\n\n ----------------- Failed to create mutex -----------------\n\n");
 	}
+	Debug_printf("\n\n --------------------Creating a MESSAGE QUEUE --------------------- \n\n");
 
 	for(;;){
 //		if(osMutexAcquire(myMutex, osWaitForever) == osOK) {

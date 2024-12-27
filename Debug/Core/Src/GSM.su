@@ -29,10 +29,10 @@
 ../Core/Src/GSM.c:742:5:generateLocationInfoMessage	192	static
 ../Core/Src/GSM.c:763:5:login_to_server	544	static
 ../Core/Src/GSM.c:806:5:send_location_to_server	552	static
-../Core/Src/GSM.c:854:5:check_data_sent_to_server	416	static
-../Core/Src/GSM.c:967:5:close_connection	280	static
-../Core/Src/GSM.c:997:5:extract_time_CCLK	192	static
-../Core/Src/GSM.c:1026:5:getCurrentTime	16	static
-../Core/Src/GSM.c:1050:6:receiveRMCDataWithAddrGSM	120	static
-../Core/Src/GSM.c:1099:5:processUploadDataToServer	24	static
-../Core/Src/GSM.c:1149:6:StartGSM	32	static
+../Core/Src/GSM.c:848:5:check_data_sent_to_server	568	static
+../Core/Src/GSM.c:985:5:close_connection	280	static
+../Core/Src/GSM.c:1015:5:extract_time_CCLK	192	static
+../Core/Src/GSM.c:1044:5:getCurrentTime	16	static
+../Core/Src/GSM.c:1068:6:receiveRMCDataWithAddrGSM	120	static
+../Core/Src/GSM.c:1121:5:processUploadDataToServer	32	static
+../Core/Src/GSM.c:1181:6:StartGSM	168	static

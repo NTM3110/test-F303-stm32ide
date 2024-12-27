@@ -88,18 +88,18 @@ extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim3;
 extern osThreadId SpiFlashHandle;
 
-osMessageQueueId_t RMC_MailQGSMId;
-osMailQId addr_MailQGSMId;
 
 extern osMutexId_t myMutex;
 uint32_t result_address;
 Queue_GSM result_addr_queue;
 extern osThreadId_t GSMHandle;
+
 //Queue_GSM mail_sent_queue;
 
 int is_disconnect = 0;
 int is_using_flash = 0;
 int mode = 0;
+int is_keep_up = 0;
 uint8_t count_shiftleft = 0;
 int is_pushing_data = 0;
 

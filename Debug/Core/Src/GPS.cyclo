@@ -1,8 +1,8 @@
-../Core/Src/GPS.c:34:6:copy_array	2
-../Core/Src/GPS.c:40:6:GPSUART_ReInitializeRxDMA	2
-../Core/Src/GPS.c:53:6:display_rmc_data	1
-../Core/Src/GPS.c:70:8:convertToEpoch	1
-../Core/Src/GPS.c:88:6:parse_rmc	14
-../Core/Src/GPS.c:148:6:sendRMCDataToFlash	2
-../Core/Src/GPS.c:161:6:getRMC	13
-../Core/Src/GPS.c:208:6:StartGPS	2
+../Core/Src/GPS.c:33:6:copy_array	2
+../Core/Src/GPS.c:39:6:GPSUART_ReInitializeRxDMA	2
+../Core/Src/GPS.c:52:6:display_rmc_data	1
+../Core/Src/GPS.c:69:8:convertToEpoch	1
+../Core/Src/GPS.c:87:6:parse_rmc	14
+../Core/Src/GPS.c:147:6:sendRMCDataToFlash	2
+../Core/Src/GPS.c:160:6:getRMC	13
+../Core/Src/GPS.c:208:6:StartGPS	1

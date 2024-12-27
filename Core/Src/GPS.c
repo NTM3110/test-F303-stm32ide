@@ -14,10 +14,9 @@
 
 uint8_t rmc_str[128]= {0};
 RingBufferDmaU8_TypeDef GPSRxDMARing;
-
+extern osMessageQueueId_t RMC_MailQFLASHId;
 uint8_t gpsSentence[GPS_STACK_SIZE];
-
-osMessageQueueId_t RMC_MailQFLASHId; // Mail queue identifier FLASH
+// Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
 #define GMT 		000
@@ -202,6 +201,7 @@ void getRMC(){
 	}
 	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
 	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
+	HAL_UART_Transmit(&huart1, (uint8_t*)"\n",1, 1000);
 }
 
 
@@ -225,14 +225,6 @@ void StartGPS(void const * argument)
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
 
-	Debug_printf("\n\n --------------------Creating a MESSAGE QUEUE --------------------- \n\n");
-	RMC_MailQFLASHId = osMessageQueueNew(3, sizeof(RMCSTRUCT), NULL);
-	if (RMC_MailQFLASHId == NULL) {
-	    Debug_printf("\n\n --------------------Failed to create message queue ----------------\n\n");
-	}
-	else{
-		Debug_printf("\n\n --------------------Create MESSAGE QUEUE FROM GPS TO FLASH SUCCESSFULLY: %d ----------------\n\n", sizeof(RMC_MailQFLASHId));
-	}
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)

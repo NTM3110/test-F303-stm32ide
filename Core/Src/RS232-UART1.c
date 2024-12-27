@@ -9,7 +9,8 @@
 
 uint16_t j,k,cnt,check;
 RingBufferDmaU8_TypeDef rs232Ext2RxDMARing;
-osMessageQueueId_t tax_MailQId;
+extern osMessageQueueId_t tax_MailQId;
+
 uint8_t taxBuffer[128];
 uint8_t gsvSentence[2048];
 TAX_MAIL_STRUCT taxMailStruct;
