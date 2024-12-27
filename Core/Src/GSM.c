@@ -1373,7 +1373,7 @@ void StartGSM(void const * argument)
 										Debug_printf("End address of network outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
 									}
 
-									// TODO: THe duration of checking data sent is 20s. WHAT IF IN THAT DURATION THE ACTUAL ADDRESS HAS BEEN SHIFT LEFT
+
 									Debug_printf("\n-----------ADDING current address to the result queue----------\n");
 									enqueue_GSM(&result_addr_queue, current_addr_gsm);
 									if(is_keep_up == 0) num_in_mail_sent++;
@@ -1395,6 +1395,8 @@ void StartGSM(void const * argument)
 												count_stack--;
 											}
 										}
+										start_addr_disconnect -= count_shiftleft * 128;
+										count_shiftleft = 0;
 										in_getting_mail_stack = 0;
 										Debug_printf("\n\n-------------- HAVE SENT ALL THE STACKED DATA IN MAIL QUEUE ----------------\n\n");
 									}
@@ -1406,7 +1408,6 @@ void StartGSM(void const * argument)
 										Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
 										is_using_flash = 0;
 										clearQueue_GSM(&result_addr_queue);
-	//									clearQueue_GSM(&mail_sent_queue);
 										start_addr_disconnect = 0;
 										end_addr_disconnect = 0;
 										count_shiftleft = 0;
@@ -1466,7 +1467,7 @@ void StartGSM(void const * argument)
 										}
 										//This is the current address when fetching simultaneously with FLASH.
 										int count_shiftleft_dub = count_shiftleft;
-										for (int i = 0; i < result_addr_queue.size; i++) {
+										for (int i = 0; i < result_addr_queue.size; i++){
 											int idx = (result_addr_queue.front + i) % MAX_SIZE;
 											if(result_addr_queue.data[idx] == FLASH_END_ADDRESS-0x100){
 												result_addr_queue.data[idx] -= 128 * count_shiftleft_dub;
@@ -1528,6 +1529,7 @@ void StartGSM(void const * argument)
 									is_using_flash = 0;
 								}
 								else{
+									// TODO: THe duration of checking data sent is 20s. WHAT IF IN THAT DURATION THE ACTUAL ADDRESS HAS BEEN SHIFT LEFT
 									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 									int count_mail_end_addr = 0;
 									while(1){
@@ -1551,7 +1553,7 @@ void StartGSM(void const * argument)
 											start_addr_disconnect -= count_mail_end_addr * 128;
 										}
 										else{
-											start_addr_diconnect -= (count_mail_end_addr - 1) * 128;
+											start_addr_disconnect -= (count_mail_end_addr - 1) * 128;
 										}
 									}
 								}
@@ -1611,7 +1613,7 @@ void StartGSM(void const * argument)
 				}
 				break;
 		}
-		if(is_in_sending == 0){
+		if(is_in_sending == 0 && is_disconnect == 1){
 			receiveRMCDataWithAddrGSM();
 		}
 		if(is_in_sending == 1){
