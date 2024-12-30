@@ -37,11 +37,6 @@ extern SPI_HandleTypeDef hspi1; // STM32 SPI instance
 //extern uint8_t gsvSentence[2048];
 //extern uint8_t taxBuffer[128];
 
-extern osMailQId tax_MailQId;
-extern osMailQId RMC_MailQFLASHId;
-extern osMailQId RMC_MailQGSMId;
-extern osMailQId RMC_MailQLEDId;
-
 #define TIMEOUT                 1000 // MS Timeout for HAL function calls
 #define PAGE_PROGRAM_TIMEOUT    1000 // MS Timeout for Program
 #define SECTOR_ERASE_TIMEOUT    1000 // MS Timeout for Sector Erase, Program, and Chip erase
@@ -100,12 +95,23 @@ extern volatile uint32_t current_addr_gsm;
 extern volatile uint32_t end_addr_disconnect;
 extern int is_disconnect;
 extern int is_using_flash;
+extern int is_pushing_data;
+extern int is_keep_up;
 extern Queue_GSM result_addr_queue;
 extern Queue_GSM mail_sent_queue;
+extern osMutexId_t myMutex;
+extern osThreadId_t SpiFlashHandle;
+
+#define FLASH_START_ADDRESS 0x3000
+#define FLASH_END_ADDRESS   0x5000
+#define SECTOR_SIZE         0x1000 // Assuming sector size is 4 KB
+#define PAGE_SIZE           0x80
+
+
 
 extern int mode;
 
-extern int count_shiftleft;
+extern uint8_t count_shiftleft;
 
 int W25_ChipErase(void);
 

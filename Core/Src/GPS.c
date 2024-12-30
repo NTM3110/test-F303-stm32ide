@@ -14,10 +14,9 @@
 
 uint8_t rmc_str[128]= {0};
 RingBufferDmaU8_TypeDef GPSRxDMARing;
-
+extern osMessageQueueId_t RMC_MailQFLASHId;
 uint8_t gpsSentence[GPS_STACK_SIZE];
-
-osMailQId RMC_MailQFLASHId; // Mail queue identifier FLASH
+// Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
 #define GMT 		000
@@ -44,7 +43,7 @@ void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
 	{
 		Error_Handler();			
 	}		
-	HAL_Delay(50);	//	50 is OK
+	osDelay(50);	//	50 is OK
 	//memset(gnssDmaRingBufferMemory, 0x20, sizeof(gnssDmaRingBufferMemory));	// insert buffer with space character	
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 }
@@ -54,7 +53,7 @@ void display_rmc_data(UART_HandleTypeDef *huart) {
 
     Debug_printf("Time: %02d:%02d:%02d\r\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 
-    Debug_printf("Date: %02d/%02d/%04d\r\n", rmc.date.Day, rmc.date.Mon, rmc.date.Yr);
+    Debug_printf("Date: %02d/%02d/20%02d\r\n", rmc.date.Day, rmc.date.Mon, rmc.date.Yr);
 	
     Debug_printf("Latitude: %.6f %c\r\n", rmc.lcation.latitude, rmc.lcation.NS);
 
@@ -116,7 +115,7 @@ void parse_rmc(uint8_t *rmc_sentence) {
                     rmc.lcation.longitude = (atof((char *)rmc_sentence))/100;
                     int longi_int = (int)floor(rmc.lcation.longitude);
 					float longi_float = rmc.lcation.longitude - longi_int;
-					longi_float = longi_float/0.6;
+					longi_float = longi_float / 0.6;
 					rmc.lcation.longitude = longi_int + longi_float;
                     break;
                 case 6:  // E/W
@@ -147,11 +146,14 @@ void parse_rmc(uint8_t *rmc_sentence) {
 
 void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
 	HAL_UART_Transmit(&huart1, (uint8_t*) "SENDING RMC TO FLASH\n",  strlen("SENDING RMC\n") , HAL_MAX_DELAY);
-    RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQFLASHId, osWaitForever); // Allocate memory for mail
-    if (mail != NULL) {
-        *mail = *rmcData; // Copy data into allocated memory
-        osMailPut(RMC_MailQFLASHId, mail); // Put message in queue
-    }
+	osStatus_t status = osMessageQueuePut(RMC_MailQFLASHId, rmcData, 0, 1000);
+	if (status != osOK) {
+	   Debug_printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
+	}
+	else{
+		Debug_printf("\n\n-------------------------SEND message successfullly at GPS: %d ------------------------\n\n", status);
+
+	}
 }
 
 
@@ -182,7 +184,10 @@ void getRMC(){
 //		display_rmc_data(&huart1);
 //		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 //		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
+		get_RTC_time_date(&rmc);
+
 		if(rmc.isValid == 1){
+			Debug_printf("\n\n------------ Sending RMC at GPS------------\n\n");
 			sendRMCDataToFlash(&rmc);
 			getRMC_time = 0;
 		}
@@ -196,14 +201,15 @@ void getRMC(){
 	}
 	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
 	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
+	HAL_UART_Transmit(&huart1, (uint8_t*)"\n",1, 1000);
 }
 
 
 void StartGPS(void const * argument)
 {
-	HAL_UART_Transmit(&huart1,(uint8_t*) "STARTING GPS", strlen("STARTING GPS"), 1000);
+	Debug_printf("\n\n--------------------STARTING GPS ---------------------\n\n");
 	/* USER CODE BEGIN StartGPS */
-	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
+
 //	/* Infinite loop */
 	rmc.tim.hour = 0;
 	rmc.tim.min = 0;
@@ -218,24 +224,21 @@ void StartGPS(void const * argument)
 	rmc.date.Day = 0;
 	rmc.date.Mon = 0;
 	rmc.date.Yr = 0;
-	osMailQDef(FLASH_MailQ, 5, RMCSTRUCT);
-	RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
 
+	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
+//		osThreadId_t thread1 = osThreadGetId();
+//		uint32_t freeStack1 = osThreadGetStackSpace(thread1);
+//
+//		Debug_printf("Thread GPS %p is running low on stack: %04d bytes remaining\n", thread1, freeStack1);
+		Debug_printf("\n\n----------------------- Inside GPS ------------------------\n\n");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		HAL_Delay(1500);
+		osDelay(500);
 		getRMC();
-		//rmc.lcation.latitude -= 0.000001;
-//		rmc.tim.sec += 2;
-//		rmc.lcation.latitude = route[count].latitude;
-//		rmc.lcation.longitude = route[count].longitude;
-//		count++;
-		HAL_UART_Transmit(&huart1, (uint8_t *)"Getting GPS \n", strlen("Getting GPS \n"), 1000);
-		uart_transmit_string(&huart1,(uint8_t*) "\n\n ");
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		HAL_Delay(1500);
+		osDelay(500);
 	}
   /* USER CODE END StartGPS */
 }

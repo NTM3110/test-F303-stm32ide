@@ -479,8 +479,10 @@ void StartRFID(void const * argument){
 
 	/* Init the board */
 	st25r95_init(&reader_handler);
+
 	/* Calibration */
 	st25r95_calibrate(&reader_handler);
+
 	/* Switches the board into low consumption mode */
 	st25r95_idle(&reader_handler);
 	while(1) {

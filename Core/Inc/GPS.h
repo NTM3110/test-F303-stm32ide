@@ -1,5 +1,7 @@
 #include "RS232-UART1.h"
 #include "time.h"
+#include "main.h"
+#include "cmsis_os.h"
 
 #define GPS_GPIO_Port		GPIOC	
 #define GPS_GPIO_Pin		GPIO_PIN_2
@@ -12,6 +14,7 @@ extern UART_HandleTypeDef huart1;
 void getGPS();
 
 void parse_rmc(uint8_t *rmc_sentence);
+
 
 
 #define GPS_ENABLE()   HAL_GPIO_WritePin(GPS_GPIO_Port, GPS_GPIO_Pin, GPIO_PIN_RESET)
