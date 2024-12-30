@@ -790,6 +790,11 @@ int login_to_server(int connect_id, const JT808_TerminalRegistration *reg_msg){
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
+		if (strstr((char*)response, "closed") != NULL) {
+			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			 SIM_UART_ReInitializeRxDMA();
+			 return 2;
+		 }
 		count_check++;
 		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", count_check);
 		uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
@@ -832,6 +837,11 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 			SIM_UART_ReInitializeRxDMA();
 			count_resend++;
 			return 0;
+		}
+		if (strstr((char*)response, "closed") != NULL) {
+			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			 SIM_UART_ReInitializeRxDMA();
+			 return 2;
 		}
 		count_check++;
 		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", count_check);
@@ -1151,6 +1161,7 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 			SIM_UART_ReInitializeRxDMA();
 			Debug_printf("The connection to server is closed. \n");
 			count_resend++;
+			return 2;
 		}
 		else{
 			uart_transmit_string(&huart1, (uint8_t *)"\n\n---------------------  Sending ERROR (SENDING ERROR)  -------------------\n\n");

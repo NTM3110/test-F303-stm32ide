@@ -12,6 +12,17 @@
 #include "RTC.h"
 #include "spi_flash.h"
 
+// Define M_PI if it's not already defined
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+// Define Earth's radius in kilometers
+#define EARTH_RADIUS_KM 6371.0
+
+// Convert degrees to radians
+#define DEG_TO_RAD(deg) ((deg) * M_PI / 180.0)
+
 uint8_t rmc_str[128]= {0};
 RingBufferDmaU8_TypeDef GPSRxDMARing;
 extern osMessageQueueId_t RMC_MailQFLASHId;
@@ -19,6 +30,8 @@ uint8_t gpsSentence[GPS_STACK_SIZE];
 // Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
+RMCSTRUCT rmc_saved;
+
 #define GMT 		000
 
 int isRMCExist = 0;
@@ -28,12 +41,49 @@ int daychange = 0;
 
 int getRMC_time = 0;
 
+// Haversine formula to calculate distance between two lat/lon points
+double haversine(double lat1, double lon1, double lat2, double lon2) {
+    // Convert degrees to radians
+    lat1 = DEG_TO_RAD(lat1);
+    lon1 = DEG_TO_RAD(lon1);
+    lat2 = DEG_TO_RAD(lat2);
+    lon2 = DEG_TO_RAD(lon2);
 
+    // Haversine formula
+    double dlat = lat2 - lat1;
+    double dlon = lon2 - lon1;
+    double a = sin(dlat / 2) * sin(dlat / 2) +
+               cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return EARTH_RADIUS_KM * c;  // Distance in kilometers
+}
+
+// Function to check if the new position is within 1 km of the last position
+int isWithinThreshold(double lat1, double lon1, double lat2, double lon2, double threshold) {
+    double distance = haversine(lat1, lon1, lat2, lon2);
+    return distance <= threshold;
+}
 
 void copy_array(uint8_t *des, uint8_t *src, int size){
 	for(size_t i = 0 ;i <  size; i++){
 		des[i] = src[i];
 	}
+}
+
+void copy_RMC(RMCSTRUCT *rmc_src, RMCSTRUCT *rmc_dest){
+	rmc_src->tim.hour = rmc_dest->tim.hour;
+	rmc_src->tim.min = rmc_dest->tim.min;
+	rmc_src->tim.sec = rmc_dest->tim.sec;
+	rmc_src->date.Day = rmc_dest->date.Day;
+	rmc_src->date.Mon = rmc_dest->date.Mon;
+	rmc_src->date.Yr = rmc_dest->date.Yr;
+	rmc_src->lcation.latitude = rmc_dest->lcation.latitude;
+	rmc_src->lcation.longitude = rmc_dest->lcation.longitude;
+	rmc_src->lcation.NS = rmc_dest->lcation.NS;
+	rmc_src->lcation.EW = rmc_dest->lcation.EW;
+	rmc_src->speed = rmc_dest->speed;
+	rmc_src->course = rmc_dest->course;
+	rmc_src->isValid = rmc_dest->isValid;
 }
 
 void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
@@ -48,6 +98,48 @@ void GPSUART_ReInitializeRxDMA(void)// ham khoi tao lai DMA
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 }
 
+void coldStart(void){
+	HAL_UART_Transmit(&huart2, (uint8_t*)"$PMTK104*37\r\n", strlen("$PMTK104*37\r\n"), 2000);
+}
+
+// Function to validate the checksum of an NMEA sentence
+int validateChecksum(uint8_t *nmeaSentence, size_t len) {
+    const uint8_t *start = nmeaSentence;  // Start of the sentence (after '$')
+    const uint8_t *checksumStart = NULL;
+
+    // Find the checksum part (after '*')
+    for (size_t i = 0; i < len; i++) {
+        if (nmeaSentence[i] == '*') {
+            checksumStart = &nmeaSentence[i];
+            break;
+        }
+    }
+
+    if (!checksumStart) {
+        return 0;  // Invalid sentence format
+    }
+
+    uint8_t calculatedChecksum = 0;
+
+    // XOR all characters between '$' and '*', excluding both symbols
+    for (const uint8_t *p = start + 1; p < checksumStart; ++p) {
+        calculatedChecksum ^= *p;
+    }
+
+    // Extract the received checksum (after '*')
+    if (checksumStart + 2 < nmeaSentence + len) {
+        uint8_t receivedChecksum = (uint8_t)strtol((char *)(checksumStart + 1), NULL, 16);
+
+        // Debugging: Print calculated and received checksums
+        Debug_printf("Calculated checksum: %02x\n", calculatedChecksum);
+        Debug_printf("Received checksum: %02x\n", receivedChecksum);
+
+        // Compare the calculated checksum with the received checksum
+        return calculatedChecksum == receivedChecksum;
+    }
+
+    return 0; // Invalid checksum
+}
 
 void display_rmc_data(UART_HandleTypeDef *huart) {
 
@@ -86,6 +178,15 @@ time_t convertToEpoch(int year, int month, int day, int hour, int min, int sec) 
 
 void parse_rmc(uint8_t *rmc_sentence) {
     int field = 0;
+//    uint8_t str_cpy[128];
+//    strcpy(str_cpy, rmc_sentence);
+    HAL_UART_Transmit(&huart1, rmc_sentence, 128,1000);
+	HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n",1, 1000);
+
+	if(validateChecksum(rmc_sentence, 128) == 0){
+		return;
+	}
+
     uint8_t *ptr = rmc_sentence;
 
     while (*ptr) {
@@ -185,14 +286,32 @@ void getRMC(){
 //		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 //		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 		get_RTC_time_date(&rmc);
-
-		if(rmc.isValid == 1){
+		if(rmc.isValid == 1 &&
+		  (rmc_saved.isValid == 0 || isWithinThreshold(rmc_saved.lcation.latitude, rmc_saved.lcation.longitude, rmc.lcation.latitude, rmc.lcation.longitude, 1.0)) &&
+		  rmc.course > 3){
 			Debug_printf("\n\n------------ Sending RMC at GPS------------\n\n");
 			sendRMCDataToFlash(&rmc);
 			getRMC_time = 0;
+			copy_RMC(&rmc_saved, &rmc);
 		}
+		else{
+			if(rmc_saved.isValid == 1){
+				Debug_printf("\n\n------------ GPS BUG: Sending latest RMC at GPS------------\n\n");
+				get_RTC_time_date(&rmc_saved);
+				sendRMCDataToFlash(&rmc_saved);
+			}
+		}
+
 		isRMCExist = 0;
 	}
+	else{
+		Debug_printf("\n\n------------ GPS MODULE BUG: NO RMC FOUND ------------\n\n");
+	}
+
+//	if(getRMC_time >= 150 && getRMC_time % 150 == 0){
+//		Debug_printf("\n\n-------------------  COLD START GPS module -----------------------\n\n");
+//		coldStart();
+//	}
 	if(getRMC_time >= 500){
 		GPS_DISABLE();
 		osDelay(500);
@@ -200,8 +319,8 @@ void getRMC(){
 		getRMC_time = 0;
 	}
 	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
-	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
-	HAL_UART_Transmit(&huart1, (uint8_t*)"\n",1, 1000);
+//	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
+//	HAL_UART_Transmit(&huart1, (uint8_t*)"\n",1, 1000);
 }
 
 

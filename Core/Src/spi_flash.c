@@ -24,11 +24,15 @@ uint32_t address_rmc = FLASH_START_ADDRESS;
 uint32_t current_addr = FLASH_START_ADDRESS;
 int is_erased_tax = 0;
 int is_erased_rmc = 0;
+int is_read_flash_valid = 1;
 
 uint8_t flashBufferTaxReceived[128];
 uint8_t flashBufferRMCReceived[128];
 uint8_t taxBufferDemo[128];
 uint8_t rmcBufferDemo[128];
+
+uint8_t current_sector_buffer[SECTOR_SIZE];
+uint8_t next_page_buffer[PAGE_SIZE];
 
 RMCSTRUCT rmc_flash;
 GSM_MAIL_STRUCT mail_gsm;
@@ -229,8 +233,6 @@ void UpdatePageAddress(uint8_t *page, uint32_t new_address) {
 }
 
 int W25_ShiftLeftFlashDataByPage(void) {
-	uint8_t current_sector_buffer[SECTOR_SIZE];
-	uint8_t next_page_buffer[PAGE_SIZE];
     uint32_t current_sector_start = FLASH_START_ADDRESS;
 
     Debug_printf("\n\n ------------------------------ IN SHIFT LEFT: ----------------------------\n\n");
@@ -551,6 +553,15 @@ RMCSTRUCT readFlash(uint32_t addr){
 	RMCSTRUCT rmc;
 	parseRMCString(flashBufferRMCReceived, &rmc);
 
+	if(IsPageValid(flashBufferRMCReceived) == 0){
+		is_read_flash_valid = 0;
+		Debug_printf("\n\n--------------------- READING FLASH (RMC) ERROR ----------------------------\n\n");
+	}
+	else{
+		is_read_flash_valid = 1;
+		Debug_printf("\n\n--------------------- READING FLASH (RMC) SUCCESSFULLY ----------------------------\n\n");
+	}
+
 	Debug_printf("Date: %02d-%02d-%02d\n", rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
 
 	Debug_printf("Time: %02d:%02d:%02d\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
@@ -607,7 +618,7 @@ void receiveRMCDataFromGPS(void) {
 
 			format_rmc_data(&rmc_flash,(char*) rmcBufferDemo, 128);
 
-			if(countRMCReceived == 9){
+			if(countRMCReceived == 29){
 
 				saveRMC();
 				Debug_printf("---------------------Sending the current data----------------");
@@ -638,7 +649,7 @@ void receiveRMCDataFromGPS(void) {
 				if(is_using_flash == 1 && is_disconnect == 0 && is_keep_up == 1){
 					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue) && (start_addr_disconnect <= (FLASH_END_ADDRESS - 0x100))){
 						Debug_printf("\n-------SKIPPING address cause it was sent already: %08lx--------\n", start_addr_disconnect);
-						start_addr_disconnect +=128;
+						if(start_addr_disconnect <= (current_addr - 128))	start_addr_disconnect +=128;
 					}
 					else{
 						addr_to_get_from_FLASH = start_addr_disconnect - (count_shiftleft * 128);
@@ -646,7 +657,8 @@ void receiveRMCDataFromGPS(void) {
 						Debug_printf("\n---------------- Sending data in disconnected phase to GSM: %08lx -------------------\n", start_addr_disconnect);
 						mail_gsm.rmc = readFlash(addr_to_get_from_FLASH);
 						mail_gsm.address = start_addr_disconnect;
-						sendRMCDataWithAddrToGSM(&mail_gsm);
+						if(is_read_flash_valid == 1)
+							sendRMCDataWithAddrToGSM(&mail_gsm);
 					}
 				}
 				//is_over_flow = 0;
@@ -655,7 +667,7 @@ void receiveRMCDataFromGPS(void) {
 		// Free memory after use
 	}
 	else{
-		Debug_printf("\n\n-------------------------- RECEIVED MAIL FROM GPS FAILED: %d ------------------------\n\n",status);
+		Debug_printf("\n\n-------------------------- RECEIVED MAIL FROM GPS AT SPI FLASH FAILED: %d ------------------------\n\n",status);
 	}
 }
 
@@ -668,7 +680,7 @@ void StartSpiFlash(void const * argument)
 	current_addr = address_rmc;
 
 
-	RMC_MailQFLASHId = osMessageQueueNew(3, sizeof(RMCSTRUCT), NULL);
+	RMC_MailQFLASHId = osMessageQueueNew(11, sizeof(RMCSTRUCT), NULL);
 	if (RMC_MailQFLASHId == NULL) {
 		Debug_printf("\n\n --------------------Failed to create message queue ----------------\n\n");
 	}

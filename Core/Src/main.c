@@ -18,10 +18,11 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os.h"
+#include "cmsis_os2.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "system_management.h"
 
 /* USER CODE END Includes */
 
@@ -72,42 +73,42 @@ osThreadId_t ControllingLEDHandle;
 const osThreadAttr_t ControllingLED_attributes = {
   .name = "ControllingLED",
   .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for UART1 */
 osThreadId_t UART1Handle;
 const osThreadAttr_t UART1_attributes = {
   .name = "UART1",
   .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for SpiFlash */
 osThreadId_t SpiFlashHandle;
 const osThreadAttr_t SpiFlash_attributes = {
   .name = "SpiFlash",
   .stack_size = 2072 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for GPS */
 osThreadId_t GPSHandle;
 const osThreadAttr_t GPS_attributes = {
   .name = "GPS",
-  .stack_size = 480 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 608 * 4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for RFID */
 osThreadId_t RFIDHandle;
 const osThreadAttr_t RFID_attributes = {
   .name = "RFID",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for GSM */
 osThreadId_t GSMHandle;
 const osThreadAttr_t GSM_attributes = {
   .name = "GSM",
-  .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .stack_size = 1048 * 4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* USER CODE BEGIN PV */
 
@@ -214,7 +215,7 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-//  /* creation of defaultTask */
+  /* creation of defaultTask */
 //  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 //
 //  /* creation of ControllingLED */
@@ -222,14 +223,11 @@ int main(void)
 //
 //  /* creation of UART1 */
 //  UART1Handle = osThreadNew(StartUART1, NULL, &UART1_attributes);
-
   /* creation of GPS */
   GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
 
   /* creation of SpiFlash */
   SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
-
-
 
 //  /* creation of RFID */
 //  RFIDHandle = osThreadNew(StartRFID, NULL, &RFID_attributes);
@@ -260,6 +258,22 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
+
+void vApplicationStackOverflowHook(osThreadId_t xTask, signed char *pcTaskName) {
+    // Log the error
+    Debug_printf("Stack overflow detected in task: %s\n", pcTaskName);
+
+//    // Optionally terminate the task or halt the system
+//    osThreadId_t taskID = (osThreadId_t)xTask;
+//    osThreadTerminate(taskID);
+
+    while (1) {
+        // Infinite loop for debugging
+    	Debug_printf("Stack overflow detected in task: %s\n", pcTaskName);
+    }
+}
+
+
 
 /**
   * @brief System Clock Configuration
@@ -862,7 +876,6 @@ void StartDefaultTask(void *argument)
   }
   /* USER CODE END 5 */
 }
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode
