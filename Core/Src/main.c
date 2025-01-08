@@ -18,22 +18,24 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "cmsis_os2.h"
+#include "cmsis_os.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "system_management.h"
+#include "spi_flash.h"
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticTask_t osStaticThreadDef_t;
+typedef StaticQueue_t osStaticMessageQDef_t;
 /* USER CODE BEGIN PTD */
-osMutexId_t myMutex;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define RTC_INIT_FLAG 0x32F2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -84,31 +86,79 @@ const osThreadAttr_t UART1_attributes = {
 };
 /* Definitions for SpiFlash */
 osThreadId_t SpiFlashHandle;
+uint32_t SpiFlashBuffer[ 1536 ];
+osStaticThreadDef_t SpiFlashControlBlock;
 const osThreadAttr_t SpiFlash_attributes = {
   .name = "SpiFlash",
-  .stack_size = 2072 * 4,
+  .cb_mem = &SpiFlashControlBlock,
+  .cb_size = sizeof(SpiFlashControlBlock),
+  .stack_mem = &SpiFlashBuffer[0],
+  .stack_size = sizeof(SpiFlashBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for GPS */
 osThreadId_t GPSHandle;
+uint32_t GPSBuffer[ 480 ];
+osStaticThreadDef_t GPSControlBlock;
 const osThreadAttr_t GPS_attributes = {
   .name = "GPS",
-  .stack_size = 608 * 4,
+  .cb_mem = &GPSControlBlock,
+  .cb_size = sizeof(GPSControlBlock),
+  .stack_mem = &GPSBuffer[0],
+  .stack_size = sizeof(GPSBuffer),
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for RFID */
 osThreadId_t RFIDHandle;
 const osThreadAttr_t RFID_attributes = {
   .name = "RFID",
-  .stack_size = 128 * 4,
+  .stack_size = 64 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for GSM */
 osThreadId_t GSMHandle;
+uint32_t GSMBuffer[ 896 ];
+osStaticThreadDef_t GSMControlBlock;
 const osThreadAttr_t GSM_attributes = {
   .name = "GSM",
-  .stack_size = 1048 * 4,
+  .cb_mem = &GSMControlBlock,
+  .cb_size = sizeof(GSMControlBlock),
+  .stack_mem = &GSMBuffer[0],
+  .stack_size = sizeof(GSMBuffer),
   .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for RMC_MailQFLASHId */
+osMessageQueueId_t RMC_MailQFLASHIdHandle;
+uint8_t RMC_MailQFLASHIdBuffer[ 3 * 88 ];
+osStaticMessageQDef_t RMC_MailQFLASHIdControlBlock;
+const osMessageQueueAttr_t RMC_MailQFLASHId_attributes = {
+  .name = "RMC_MailQFLASHId",
+  .cb_mem = &RMC_MailQFLASHIdControlBlock,
+  .cb_size = sizeof(RMC_MailQFLASHIdControlBlock),
+  .mq_mem = &RMC_MailQFLASHIdBuffer,
+  .mq_size = sizeof(RMC_MailQFLASHIdBuffer)
+};
+/* Definitions for RMC_MailQGSMId */
+osMessageQueueId_t RMC_MailQGSMIdHandle;
+uint8_t RMC_MailQGSMIdBuffer[ 64 * 96 ];
+osStaticMessageQDef_t RMC_MailQGSMIdControlBlock;
+const osMessageQueueAttr_t RMC_MailQGSMId_attributes = {
+  .name = "RMC_MailQGSMId",
+  .cb_mem = &RMC_MailQGSMIdControlBlock,
+  .cb_size = sizeof(RMC_MailQGSMIdControlBlock),
+  .mq_mem = &RMC_MailQGSMIdBuffer,
+  .mq_size = sizeof(RMC_MailQGSMIdBuffer)
+};
+/* Definitions for tax_MailQId */
+osMessageQueueId_t tax_MailQIdHandle;
+uint8_t tax_MailQIdBuffer[ 1 * 128 ];
+osStaticMessageQDef_t tax_MailQIdControlBlock;
+const osMessageQueueAttr_t tax_MailQId_attributes = {
+  .name = "tax_MailQId",
+  .cb_mem = &tax_MailQIdControlBlock,
+  .cb_size = sizeof(tax_MailQIdControlBlock),
+  .mq_mem = &tax_MailQIdBuffer,
+  .mq_size = sizeof(tax_MailQIdBuffer)
 };
 /* USER CODE BEGIN PV */
 
@@ -136,14 +186,30 @@ void StartRFID(void *argument);
 void StartGSM(void *argument);
 
 /* USER CODE BEGIN PFP */
-void Delay_1s(void)
-{
-    // Reset the timer counter to 0
-    __HAL_TIM_SET_COUNTER(&htim3, 0);
+void Initialize_RTC(void) {
+    // Enable Power Clock
+    __HAL_RCC_PWR_CLK_ENABLE();
 
-    // Wait until the counter reaches 1000
-    while (__HAL_TIM_GET_COUNTER(&htim3) < 1000);
+    // Allow access to the backup domain
+    HAL_PWR_EnableBkUpAccess();
+    if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != RTC_INIT_FLAG) {
+    	Debug_printf("\n--------------------------------------------- FIRST TIME RTC INITIALISATION ----------------------------------------------\n");
+        // First-time initialization
+        MX_RTC_Init();  // Configure RTC
+        HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, RTC_INIT_FLAG);  // Store initialization flag
+    } else {
+    	Debug_printf("\n-------------------------------------------- BACK UP RTC:  GETTING RTC FROM BACK UP ----------------------------------------\n");
+        // RTC is already configured, just read the time
+        RTC_TimeTypeDef sTime;
+        RTC_DateTypeDef sDate;
+
+        HAL_RTC_GetTime(&hrtc, &sTime, RTC_FORMAT_BIN);
+        HAL_RTC_GetDate(&hrtc, &sDate, RTC_FORMAT_BIN);
+        // Use the retrieved time and date
+    }
+
 }
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -175,6 +241,7 @@ int main(void)
   SystemClock_Config();
 
   /* USER CODE BEGIN SysInit */
+  	Initialize_RTC();
 
   /* USER CODE END SysInit */
 
@@ -210,6 +277,16 @@ int main(void)
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
+  /* Create the queue(s) */
+  /* creation of RMC_MailQFLASHId */
+  RMC_MailQFLASHIdHandle = osMessageQueueNew (3, 88, &RMC_MailQFLASHId_attributes);
+
+  /* creation of RMC_MailQGSMId */
+  RMC_MailQGSMIdHandle = osMessageQueueNew (64, 96, &RMC_MailQGSMId_attributes);
+
+  /* creation of tax_MailQId */
+  tax_MailQIdHandle = osMessageQueueNew (1, 128, &tax_MailQId_attributes);
+
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
   /* USER CODE END RTOS_QUEUES */
@@ -229,7 +306,9 @@ int main(void)
   /* creation of SpiFlash */
   SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
 
-//  /* creation of RFID */
+
+
+  /* creation of RFID */
 //  RFIDHandle = osThreadNew(StartRFID, NULL, &RFID_attributes);
 
   /* creation of GSM */
@@ -258,22 +337,6 @@ int main(void)
   }
   /* USER CODE END 3 */
 }
-
-void vApplicationStackOverflowHook(osThreadId_t xTask, signed char *pcTaskName) {
-    // Log the error
-    Debug_printf("Stack overflow detected in task: %s\n", pcTaskName);
-
-//    // Optionally terminate the task or halt the system
-//    osThreadId_t taskID = (osThreadId_t)xTask;
-//    osThreadTerminate(taskID);
-
-    while (1) {
-        // Infinite loop for debugging
-    	Debug_printf("Stack overflow detected in task: %s\n", pcTaskName);
-    }
-}
-
-
 
 /**
   * @brief System Clock Configuration
@@ -799,7 +862,7 @@ static void MX_GPIO_Init(void)
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_6
-                          |GPIO_PIN_9, GPIO_PIN_RESET);
+                          |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, GPIO_PIN_RESET);
@@ -817,8 +880,8 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PC2 PC4 PC6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_6;
+  /*Configure GPIO pins : PC2 PC4 PC6 PC8 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_4|GPIO_PIN_6|GPIO_PIN_8;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

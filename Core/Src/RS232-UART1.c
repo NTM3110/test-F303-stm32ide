@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include "stdlib.h"
 #include "math.h"
+#include <inttypes.h>
+
+#include "system_management.h"
+#include "spi_flash.h"
 
 
 uint16_t j,k,cnt,check;
@@ -14,6 +18,18 @@ extern osMessageQueueId_t tax_MailQId;
 uint8_t taxBuffer[128];
 uint8_t gsvSentence[2048];
 TAX_MAIL_STRUCT taxMailStruct;
+int is_saving_debug = 0;
+uint8_t current_debug_page[256];
+volatile uint32_t current_addr_rs232 = 0x7000;
+
+uint8_t start_cmd[] = "START SAVE DEBUG!";
+uint8_t end_cmd[] = "END_SAVE_DEBUG!";
+
+
+
+int is_get_cmd = 0;
+int is_get_start_cmd = 0;
+int is_get_end_cmd = 0;
 
 // RMCSTRUCT rmc;
 // #define GMT 		000
@@ -168,23 +184,71 @@ void Bill_Decode(){
 		rs232Ext2_InitializeRxDMA();
 	}
 }
+void handleCmd(uint8_t *buffer){
+    // Check for start_cmd
+    if (strstr((char*) buffer, (char*)start_cmd)) {
+        Debug_printf("Start command found! Handling START SAVE DEBUG logic...\n");
+        is_saving_debug = 1;
+        W25_Reset();
+        W25_SectorErase(DEBUG_START_ADDRESS);
+        // Handle START SAVE DEBUG logic here
+    }
+
+    // Check for end_cmd
+    if (strstr((char*) buffer, (char*)end_cmd)) {
+        Debug_printf("End command found! Handling END_SAVE_DEBUG logic...\n");
+        while(current_addr_rs232 < 0x8000){
+        	Debug_printf("SHOW ALL THE DEBUG SAVED IN FLASH: UNTIL");
+        	W25_Reset();
+        	W25_ReadData(current_addr_rs232, current_debug_page, 256);
+        	Debug_printf((char*)current_debug_page);
+        	Debug_printf("\n");
+        	current_addr_rs232 += 256;
+        	osDelay(200);
+        }
+        is_saving_debug = 0;
+        // Handle END_SAVE_DEBUG logic here
+    }
+
+}
+
+void getCmd(){
+	for (uint16_t i = 0; i < READLOG_BLOCK_BUFFER_LENGHT-1; i++)
+	{
+		if (gsvSentence[i] == '!')
+		{
+			is_get_cmd = 1;
+		}
+	}
+	if(is_get_cmd == 1){
+		Debug_printf((char*)gsvSentence);
+		Debug_printf("\n\n");
+		handleCmd(gsvSentence);
+		memset(gsvSentence, 0x00, 2048);
+		rs232Ext2_InitializeRxDMA();
+		is_get_cmd = 0;
+	}
+}
+
 
 void StartUART1(void const * argument)
 {
-	tax_MailQId = osMessageQueueNew(5, sizeof(TAX_MAIL_STRUCT), NULL);
+//	tax_MailQId = osMessageQueueNew(5, sizeof(TAX_MAIL_STRUCT), NULL);
 	HAL_UART_Transmit(&huart1, (uint8_t*) "STARTING UART1", strlen("STARTING UART1"), 1000);
   /* USER CODE BEGIN StartUART1 */
 	RingBufferDmaU8_initUSARTRx(&rs232Ext2RxDMARing, &huart1, gsvSentence, READLOG_BLOCK_BUFFER_LENGHT);
   /* Infinite loop */
   for(;;)
   {
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-	osDelay(1000);
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET);
+	osDelay(500);
 	//W25_Reset();
 	HAL_UART_Transmit(&huart1, message1, sizeof(message1), 100);
-	Bill_Decode();
-	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-	osDelay(1000);
+//	Bill_Decode();
+	getCmd();
+
+	HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);
+	osDelay(500);
   }
   /* USER CODE END StartUART1 */
 }

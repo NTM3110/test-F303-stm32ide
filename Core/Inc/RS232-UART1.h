@@ -47,6 +47,7 @@ typedef struct
 
 
 extern UART_HandleTypeDef huart1;
+extern uint32_t current_addr_debug;
 #define READLOG_BLOCK_BUFFER_LENGHT  2048
 
 

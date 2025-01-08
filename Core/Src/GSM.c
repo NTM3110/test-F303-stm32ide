@@ -12,10 +12,6 @@
 #include "system_management.h"
 #include "Queue_GSM.h"
 
-enum MODE{
-	MAIL,
-	STORAGE
-};
 
 uint8_t TERMINAL_REGISTRATION[128];
 uint8_t response[SIM_RESPONSE_MAX_SIZE];
@@ -27,11 +23,22 @@ int is_in_sending = 0;
 int in_getting_mail_stack = 0;
 int num_in_mail_sent = 0;
 int result_final = 1;
+int is_disconnect = 0;
+int is_using_flash = 0;
+int is_keep_up = 0;
+uint8_t count_shiftleft = 0;
+int is_pushing_data = 0;
+int count_check_csq = 0;
 
-volatile uint32_t start_addr_not_ready = 0;
-volatile uint32_t end_addr_not_ready = 0;
-volatile uint32_t current_addr_not_ready = 0;
-extern osMessageQueueId_t RMC_MailQGSMId;
+int count_send_gsm = 0;
+Queue_GSM result_addr_queue;
+volatile uint32_t start_addr_disconnect = 0;
+volatile uint32_t current_addr_gsm = 0;
+volatile uint32_t end_addr_disconnect = 0;
+
+char addr_out_gsm[10];
+
+extern osMessageQueueId_t RMC_MailQGSMIdHandle;
 
 //int is_40s = 0;
 RMCSTRUCT rmc_jt;
@@ -66,7 +73,7 @@ JT808_LocationInfoReport create_location_info_report() {
         .start_mask = 0x7E,                    // 7E
         .message_type = {0x02, 0x00},          // 02 00
         .message_length = {0x00, 0x32},        // 00 32
-        .terminal_phone_number = {0x00, 0x12, 0x34, 0x56, 0x78, 0x91}, // 00 12 34 56 78 91
+        .terminal_phone_number = {0}, // 00 12 34 56 78 91
         .terminal_serial_number = {0x00, 0x0A}, // 00 0A
         .alarm = {0x00, 0x00, 0X00, 0X00},     // 00 00 00 00
         .status = {0x00, 0x00, 0x00, 0x00},    // 00 00 00 00
@@ -84,7 +91,8 @@ JT808_LocationInfoReport create_location_info_report() {
         .additional = {0x01, 0x00, 0xFD, 0x04, 0x03, 0xF1, 0x00, 0x00, 0x0A}, // 01 00 FD 04 03 F1 00 00 0A
         .end_mask = 0x7E                       // 7E
     };
-    
+	// Copy the terminal phone number into the structure
+
     return location_info;
 }
 
@@ -151,13 +159,10 @@ int find_length(uint8_t *str){
 }
 
 void receive_response(char *cmd_str) {
-	uint8_t output_buffer[128];
-	snprintf((char *)output_buffer, 128, "Response at command: %s\n", cmd_str);
-	uart_transmit_string(&huart1, output_buffer);
+	Debug_printf("Response at command: %s\n", cmd_str);
 	//while(response[1] == '\0'){}
-
-	HAL_UART_Transmit(&huart1, response, find_length(response), 1000);
-	uart_transmit_string(&huart1, (uint8_t*)"\n");
+	Debug_printf((char *)response);
+	Debug_printf("\n");
 //	osDelay(1000);
 }
 
@@ -231,42 +236,67 @@ int first_check_SIM()
 	{
 		receive_response("WAITING FOR SIM MODULE TO BE READY\n");
 		osDelay(1000);
-		if(count_check >= 40) return 0;
+		if (count_check >= 40){
+			Debug_printf("OUT OF WAITING FOR SIM MODULE\n");
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
 		osDelay(200);
 	}
 	receive_response("WAITING FOR SIM MODULE TO BE READY\n");
 	osDelay(1000);
-//	int extract_result = extract_time(response);
-//	if(extract_result == 0) return 0;
-
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
+	count_check = 0;
 
 	send_AT_command(FIRST_CHECK);
 	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
 		receive_response("First check SIM MODULE\n");
+		if (count_check >= 5){
+			Debug_printf("OUT OF FIRST CHECK SIM MODULE\n");
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
+		osDelay(1000);
 	}
 	receive_response("First check SIM MODULE\n");
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
+	count_check = 0;
 
 	send_AT_command("AT+CPAS\r\n");
 	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
 		receive_response("Check status of SIM MODULE\n");
+		if (count_check >= 5){
+			Debug_printf("OUT OF CPAS\n");
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
 		osDelay(1000);
 	}
 	receive_response("Check status of SIM MODULE\n");
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
+	count_check = 0;
 
 	send_AT_command("AT+CMEE=2\r\n");
 	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
 		receive_response("Check enable result code\n");
+		if (count_check >= 5){
+			Debug_printf("OUT OF CMEE\n");
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
 		osDelay(1000);
 	}
 	receive_response("Check enable result code\n");
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
+	count_check = 0;
 
 	return 1;
 }
@@ -280,8 +310,10 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 					   start[6] == 'N' && start[7] == '=' && start[8] == '1')) {
 		start++;
 	}
-	uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number: ");
-	uart_transmit_string( &huart1,(uint8_t *) start);
+//	uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number: ");
+//	uart_transmit_string( &huart1,(uint8_t *) start);
+	Debug_printf("Inside Checking terminal Number: ");
+	Debug_printf((char*)start);
 	// If "AT+CGSN=1" is found, move to the start of the number (skip "AT+CGSN=1 ")
 	if (*start) {
 		start += 10;  // Move pointer past "AT+CGSN=1 "
@@ -300,6 +332,8 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 		}
 		uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number-2: LEN ");
 		snprintf((char*)output_buffer, 10, "%d", digit_count);
+
+
 		if (digit_count >= 12) {
 			const uint8_t *last_12 = end - 12;
 
@@ -335,6 +369,12 @@ int check_SIM_ready(){
 	//GET IMEI
 	send_AT_command(GET_IMEI);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
+		count_check_sim++;
+		if (count_check_sim >= 5){
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
 		receive_response("Check IMEI-0:\n");
 		osDelay(1000);
 	}
@@ -346,18 +386,7 @@ int check_SIM_ready(){
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
-
-	//GET MODEL IDENTIFICATION
-	send_AT_command(GET_MODEL_IDENTI);
-	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-		receive_response("Check MODEL IDENTIFICATION\n");
-		osDelay(1000);
-	}
-	receive_response("Check MODEL IDENTIFICATION\n");
-	osDelay(100);
-	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-	SIM_UART_ReInitializeRxDMA();
-
+	count_check_sim = 0;
 
 	// Check if SIM is ready
 	send_AT_command(CHECK_SIM_READY);
@@ -457,15 +486,18 @@ int check_SIM_ready(){
 	//CHECK SIGNAL QUALITY
 	send_AT_command(CHECK_SIGNAL_QUALITY);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
+		if (count_check_sim >= TIME_LIMIT){
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 0;
+		}
 		receive_response("Check Signal Quality Report\n");
 	}
 	receive_response("Check Signal Quality Report\n");
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
-	
-
-
+	count_check_sim = 0;
 	return 1;
 }
 
@@ -776,7 +808,7 @@ int login_to_server(int connect_id, const JT808_TerminalRegistration *reg_msg){
 	send_AT_command((char*)command);
 
 //	while(1){
-	while(strstr((char *) response, "+QIURC") == NULL){
+	while(strstr((char *) response, CHECK_RESPONSE ) == NULL){
 		char output_elapsed[128];
 		//
 		if(count_check >= 50){
@@ -791,9 +823,9 @@ int login_to_server(int connect_id, const JT808_TerminalRegistration *reg_msg){
 			return 0;
 		}
 		if (strstr((char*)response, "closed") != NULL) {
-			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			 SIM_UART_ReInitializeRxDMA();
-			 return 2;
+			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			SIM_UART_ReInitializeRxDMA();
+			return 2;
 		 }
 		count_check++;
 		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", count_check);
@@ -823,25 +855,26 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 		// Format the AT command with the hex message
 	snprintf((char *) command, sizeof(command), "AT+QISENDEX=%d,\"%s\"\r\n", connect_id, hexString);
 	send_AT_command((char*)command);
-	while(strstr((char *) response, "+QIURC") == NULL){
+	while(strstr((char *) response, "SEND OK") == NULL){
 		char output_elapsed[128];
 		osDelay(100);
+		if (strstr((char*)response, "closed") != NULL) {
+			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+			 SIM_UART_ReInitializeRxDMA();
+			 return 2;
+		}
 		if(count_check >= 50){
 			count_check = 0;
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
+
 		if (strstr((char*) response, "ERROR") != NULL){
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			count_resend++;
 			return 0;
-		}
-		if (strstr((char*)response, "closed") != NULL) {
-			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			 SIM_UART_ReInitializeRxDMA();
-			 return 2;
 		}
 		count_check++;
 		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", count_check);
@@ -1078,7 +1111,7 @@ int getCurrentTime(){
 void receiveRMCDataWithAddrGSM(){
 	uint8_t output_buffer[70];
 	uart_transmit_string(&huart1, (uint8_t*)"\\Inside Receiving Data at GSM\n\n");
-	osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
+	osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 	if(status == osOK){
 		uart_transmit_string(&huart1, (uint8_t*)"\n\nReceived  ADDRESS Data at GSM: \n");
 		uart_transmit_string(&huart1, (uint8_t*)"Address received from MAIL QUEUE: \n");
@@ -1086,7 +1119,8 @@ void receiveRMCDataWithAddrGSM(){
 		if(checkAddrExistInQueue(current_addr_gsm, &result_addr_queue) == 0 || (current_addr_gsm >= end_addr_disconnect && current_addr_gsm <= (FLASH_END_ADDRESS - 0x100))){
 //			current_addr_gsm = receivedDataGSM->address;
 			Debug_printf("Saving data to variable to send to the server\n");
-			Debug_printf("\n---------- Current data accepted at address: %08lx----------\n", current_addr_gsm);
+			Uint32ToHex(current_addr_gsm, addr_out_gsm, 8);
+			Debug_printf("\n---------- Current data accepted at address: %s----------\n", addr_out_gsm);
 			rmc_jt.lcation.latitude = receivedDataGSM.rmc.lcation.latitude;
 			rmc_jt.lcation.longitude = receivedDataGSM.rmc.lcation.longitude;
 			rmc_jt.speed = receivedDataGSM.rmc.speed;
@@ -1114,9 +1148,11 @@ void receiveRMCDataWithAddrGSM(){
 			uart_transmit_string(&huart1, output_buffer);
 
 			received_RMC = 1;
+			count_send_gsm++;
 		}
 		else{
-			Debug_printf("\n----------------Have sent data in this address successfully already: %08lx ----------------\n", receivedDataGSM.address);
+			Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
+			Debug_printf("\n----------------Have sent data in this address successfully already: %s ----------------\n", addr_out_gsm);
 		}
 	}
 	else{
@@ -1138,11 +1174,12 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 		Debug_printf(" \n\n--------------------------- GOING TO SEND DATA TO SERVER: RESEND COUNT %d -----------------------\n\n", count_resend);
 		result_send_location = send_location_to_server(0, location_info);
 
-		if(result_send_location){
+		if(result_send_location == 1){
 			uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Sending Location Report\r\n");
 			int result_check = check_data_sent_to_server(0);
 			if(result_check){
 				uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
+				Debug_printf("\n\n--------------------------------- COUNT SEND GSM: %d -------------------------------------------\n\n", count_send_gsm);
 //				receive_response("Check location report\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
@@ -1238,7 +1275,7 @@ void StartGSM(void const * argument)
 				uart_transmit_string(&huart1, (uint8_t *)"Check EVERYTHING READY\r\n");
 				osDelay(100);
 				int check_SIM = check_SIM_ready();
-				if(is_set_uniqueID == 0){
+				if(is_set_uniqueID == 0 && check_SIM == 1){
 					memcpy(reg_msg.terminal_phone_number, terminal_phone_number, sizeof(terminal_phone_number));
 					memcpy(location_info.terminal_phone_number, terminal_phone_number, sizeof(terminal_phone_number));
 					is_set_uniqueID = 1;
@@ -1328,16 +1365,28 @@ void StartGSM(void const * argument)
 				break;
 			case 5:
 				// REGISTER/LOGIN TO THE SERVER
+				int count_resend_login = 0;
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Register/Login to the server.\r\n");
-				int result_send_login = login_to_server(0,&reg_msg);
-				if(result_send_login){
-					process++;
+				while(count_resend_login < 3){
+					int result_send_login = login_to_server(0,&reg_msg);
+					receive_response("Check terminal register\n");
+					if(result_send_login){
+						Debug_printf("LOGIN TO SERVER SUCCESSFULLY\n");
+						break;
+					}
+					else{
+						count_resend_login++;
+					}
+					osDelay(200);
 				}
-				else process = 8;
+				if(count_resend_login == 3) process = 8;
+				else process++;
 				break;
 			case 6:
 				//CHECK LOGIN TO SERVER
+
 				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Register/Login\r\n");
+
 				int result_check_login = check_data_sent_to_server(0);
 				if(result_check_login){
 					receive_response("Check terminal register\n");
@@ -1362,9 +1411,25 @@ void StartGSM(void const * argument)
 						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
 						save_rmc_to_location_info(&location_info);
 						Debug_printf("Current stack address to be sent to the server: \n");
-						Debug_printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %08lx\n", current_addr_gsm);
+						Uint32ToHex(current_addr_gsm, addr_out_gsm, 8);
+						Debug_printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %s\n", addr_out_gsm);
 
 
+						//CHECK SIGNAL QUALITY
+						send_AT_command(CHECK_SIGNAL_QUALITY);
+						while(strstr((char *) response, CHECK_RESPONSE) == NULL){
+							if (count_check_csq >= 5){
+								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+								SIM_UART_ReInitializeRxDMA();
+								break;
+							}
+							receive_response("Check Signal Quality Report\n");
+						}
+						receive_response("Check Signal Quality Report\n");
+						osDelay(100);
+						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+						SIM_UART_ReInitializeRxDMA();
+						count_check_csq = 0;
 
 						HAL_TIM_Base_Start(&htim3);
 						__HAL_TIM_SET_COUNTER(&htim3, 0);
@@ -1426,9 +1491,10 @@ void StartGSM(void const * argument)
 										Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 										while(1){
 											Debug_printf("Receiving MAIL\n");
-											osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
+											osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 											if(status == osOK){
-												Debug_printf("Receiving MAIL For CLEARING: %08lx\n", receivedDataGSM.address);
+												Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
+												Debug_printf("Receiving MAIL For CLEARING: %s\n", addr_out_gsm);
 												// After processing, free the mail to clear it
 											}
 											else{
@@ -1470,7 +1536,8 @@ void StartGSM(void const * argument)
 										for (int i = 0; i < result_addr_queue.size; i++) {
 											int idx = (result_addr_queue.front + i) % MAX_SIZE;
 											if(result_addr_queue.data[idx] < start_addr_disconnect){
-												Debug_printf("CURRENT INDEX TO CHECK DELETING: %08lx", result_addr_queue.data[idx]);
+												Uint32ToHex(result_addr_queue.data[idx], addr_out_gsm, 8);
+												Debug_printf("CURRENT INDEX TO CHECK DELETING: %s", addr_out_gsm);
 		//										result_addr_queue.data[idx] -= 128 * count_shiftleft;
 												deleteMiddle_GSM(&result_addr_queue, idx);
 												i--;
@@ -1521,9 +1588,10 @@ void StartGSM(void const * argument)
 									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 									while(1){
 										Debug_printf("Receiving MAIL\n");
-										osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
+										osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 										if(status == osOK){
-											Debug_printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
+											Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
+											Debug_printf("Receiving MAIL: %s\n", addr_out_gsm);
 											if(is_keep_up == 0 && receivedDataGSM.address == 0x4F00){
 												for (int i = 0; i < num_in_mail_sent; i++) {
 													int idx = (result_addr_queue.rear - i + MAX_SIZE) % MAX_SIZE; // Calculate the index in reverse
@@ -1545,9 +1613,10 @@ void StartGSM(void const * argument)
 									int count_mail_end_addr = 0;
 									while(1){
 										Debug_printf("Receiving MAIL\n");
-										osStatus_t status = osMessageQueueGet(RMC_MailQGSMId, &receivedDataGSM, NULL, 3000); // Wait for mail
+										osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 										if(status == osOK){
-											Debug_printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
+											Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
+											Debug_printf("Receiving MAIL: %s\n", addr_out_gsm);
 											if(receivedDataGSM.address == (FLASH_END_ADDRESS - 0X100)){
 												count_mail_end_addr++;
 											}
@@ -1578,7 +1647,6 @@ void StartGSM(void const * argument)
 									reboot_SIM_module();
 									process = 0;
 									break;
-
 								} else{
 									Debug_printf("\n--------------------SENDING ERROR -----------------------\n");
 									process++;

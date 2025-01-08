@@ -44,7 +44,9 @@ Core/Src/RS232-UART1.o: ../Core/Src/RS232-UART1.c \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/portable.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h \
- ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h
+ ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h \
+ ../Core/Inc/system_management.h ../Core/Inc/spi_flash.h \
+ ../Core/Inc/Queue_GSM.h
 ../Core/Inc/RS232-UART1.h:
 ../Core/Inc/main.h:
 ../Drivers/STM32F3xx_HAL_Driver/Inc/stm32f3xx_hal.h:
@@ -92,3 +94,6 @@ Core/Src/RS232-UART1.o: ../Core/Src/RS232-UART1.c \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/deprecated_definitions.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/portmacro.h:
 ../Middlewares/Third_Party/FreeRTOS/Source/include/mpu_wrappers.h:
+../Core/Inc/system_management.h:
+../Core/Inc/spi_flash.h:
+../Core/Inc/Queue_GSM.h:

@@ -25,8 +25,9 @@
 
 uint8_t rmc_str[128]= {0};
 RingBufferDmaU8_TypeDef GPSRxDMARing;
-extern osMessageQueueId_t RMC_MailQFLASHId;
+extern osMessageQueueId_t RMC_MailQFLASHIdHandle;
 uint8_t gpsSentence[GPS_STACK_SIZE];
+int count_send_gps = 0;
 // Mail queue identifier FLASH
 
 RMCSTRUCT rmc;
@@ -120,6 +121,7 @@ int validateChecksum(uint8_t *nmeaSentence, size_t len) {
     }
 
     uint8_t calculatedChecksum = 0;
+    uint8_t receivedChecksum = 1;
 
     // XOR all characters between '$' and '*', excluding both symbols
     for (const uint8_t *p = start + 1; p < checksumStart; ++p) {
@@ -128,7 +130,7 @@ int validateChecksum(uint8_t *nmeaSentence, size_t len) {
 
     // Extract the received checksum (after '*')
     if (checksumStart + 2 < nmeaSentence + len) {
-        uint8_t receivedChecksum = (uint8_t)strtol((char *)(checksumStart + 1), NULL, 16);
+        receivedChecksum = (uint8_t)strtol((char *)(checksumStart + 1), NULL, 16);
 
         // Debugging: Print calculated and received checksums
         Debug_printf("Calculated checksum: %02x\n", calculatedChecksum);
@@ -137,11 +139,12 @@ int validateChecksum(uint8_t *nmeaSentence, size_t len) {
         // Compare the calculated checksum with the received checksum
         return calculatedChecksum == receivedChecksum;
     }
-
+    Debug_printf("Checksum mismatch: calculated 0x%02X, received 0x%02X\n",
+                         calculatedChecksum, receivedChecksum);
     return 0; // Invalid checksum
 }
 
-void display_rmc_data(UART_HandleTypeDef *huart) {
+void display_rmc_data() {
 
     Debug_printf("Time: %02d:%02d:%02d\r\n", rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
 
@@ -178,16 +181,19 @@ time_t convertToEpoch(int year, int month, int day, int hour, int min, int sec) 
 
 void parse_rmc(uint8_t *rmc_sentence) {
     int field = 0;
-//    uint8_t str_cpy[128];
-//    strcpy(str_cpy, rmc_sentence);
-    HAL_UART_Transmit(&huart1, rmc_sentence, 128,1000);
-	HAL_UART_Transmit(&huart1, (uint8_t*)"\r\n",1, 1000);
+    uint8_t str_cpy[128];
+    strcpy(str_cpy, rmc_sentence);
+    str_cpy[sizeof(str_cpy) - 1] = '\0';
+
+    Debug_printf("\n");
+    Debug_printf((char *)rmc_sentence);
+    Debug_printf("\n");
 
 	if(validateChecksum(rmc_sentence, 128) == 0){
 		return;
 	}
 
-    uint8_t *ptr = rmc_sentence;
+    uint8_t *ptr = str_cpy;
 
     while (*ptr) {
         if (*ptr == ',' || *ptr == '*') {
@@ -247,7 +253,7 @@ void parse_rmc(uint8_t *rmc_sentence) {
 
 void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
 	HAL_UART_Transmit(&huart1, (uint8_t*) "SENDING RMC TO FLASH\n",  strlen("SENDING RMC\n") , HAL_MAX_DELAY);
-	osStatus_t status = osMessageQueuePut(RMC_MailQFLASHId, rmcData, 0, 1000);
+	osStatus_t status = osMessageQueuePut(RMC_MailQFLASHIdHandle, rmcData, 0, 1000);
 	if (status != osOK) {
 	   Debug_printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
 	}
@@ -257,71 +263,164 @@ void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
 	}
 }
 
+int handleIncomingChar(char c) {
+    static char tempBuffer[256]; // Increased size for safety
+    static uint16_t tempIndex = 0;
 
-void getRMC(){
-	int idx = 0;
-	getRMC_time++;
-	int length = 0;
-	for(size_t i = 0; i < GPS_STACK_SIZE; i++){
-		if (gpsSentence[i] == '$' && gpsSentence[i+1] == 'G' && gpsSentence[i+2] == 'N' && gpsSentence[i+3] == 'R' && gpsSentence[i+4] == 'M' && gpsSentence[i+5] == 'C'
-			&& (GPS_STACK_SIZE -i) > 200 ){
-			isRMCExist = 1;
-			HAL_UART_Transmit(&huart1, (uint8_t *)"Getting RMC\n", strlen("Getting RMC\n"), 1000);
-			while(gpsSentence[i+1] != 0x0A ){
-				rmc_str[idx] = gpsSentence[i];
-				idx++;
-				i++;
-			}
-			length = idx;
-			idx = 0;
-			break;
-		}
-	 }
-	for(size_t i = length; i < 128; i++){
-		rmc_str[i] = 0;
-	}
-	if(isRMCExist == 1){
-		parse_rmc(rmc_str);
-		display_rmc_data(&huart1);
-//		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
-//		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
+    if (c == '\n') { // Sentence delimiter
+        tempBuffer[tempIndex] = '\0'; // Null-terminate the string
+        if (strstr(tempBuffer, "$GNRMC")){ // Detect `$GNRMC`
+            strncpy((char*)rmc_str, tempBuffer, sizeof(rmc_str)); // Copy sentence
+            tempIndex = 0;
+            return 1;
+        }
+        tempIndex = 0; // Reset for the next sentence
+    } else if (tempIndex < sizeof(tempBuffer) - 1) {
+        tempBuffer[tempIndex++] = c;
+    } else {
+        Debug_printf("Warning: Sentence too long, discarding\n");
+        tempIndex = 0; // Reset if line too long
+    }
+    return 0;
+}
+
+void getRMC() {
+    static uint16_t lastReadIndex = 0; // Tracks the last read position in DMA
+    uint16_t writeIndex = GPS_STACK_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart2_rx);
+
+    // Process new data in the buffer
+    while (lastReadIndex != writeIndex) {
+        char c = gpsSentence[lastReadIndex];
+
+        // Handle the character and try to detect $GNRMC
+        if (handleIncomingChar(c)){
+            isRMCExist = 1; // `$GNRMC` sentence is ready
+        }
+
+        lastReadIndex = (lastReadIndex + 1) % GPS_STACK_SIZE;
+    }
+
+    // Process `$GNRMC` sentence if detected
+    if (isRMCExist) {
+		parse_rmc(rmc_str);// Parse the `$GNRMC` sentence
+		display_rmc_data();
 		get_RTC_time_date(&rmc);
-		if(rmc.isValid == 1 &&
-		  (rmc_saved.isValid == 0 || isWithinThreshold(rmc_saved.lcation.latitude, rmc_saved.lcation.longitude, rmc.lcation.latitude, rmc.lcation.longitude, 1.0)) &&
-		  rmc.course > 3){
-			Debug_printf("\n\n------------ Sending RMC at GPS------------\n\n");
+
+//		if (rmc.isValid &&
+//			(rmc_saved.isValid == 0 ||
+//			 isWithinThreshold(rmc_saved.lcation.latitude, rmc_saved.lcation.longitude,
+//							   rmc.lcation.latitude, rmc.lcation.longitude, 1.0))) {
+		if (rmc.isValid){
+			Debug_printf("\n\n------------ Sending RMC ------------\n\n");
 			sendRMCDataToFlash(&rmc);
+			count_send_gps++;
 			getRMC_time = 0;
 			copy_RMC(&rmc_saved, &rmc);
-		}
-		else{
-			if(rmc_saved.isValid == 1){
-				Debug_printf("\n\n------------ GPS BUG: Sending latest RMC at GPS------------\n\n");
-				get_RTC_time_date(&rmc_saved);
-				sendRMCDataToFlash(&rmc_saved);
-			}
+		} else if (rmc_saved.isValid) {
+			Debug_printf("\n\n------------ GPS BUG: Sending latest RMC ------------\n\n");
+			get_RTC_time_date(&rmc_saved);
+			sendRMCDataToFlash(&rmc_saved);
+			if(rmc_saved.date.Yr >= 24)
+				count_send_gps++;
+		} else{
+			Debug_printf("\n\n------------ DATA FROM GPS MODULE IS NOT VALID YET ------------\n\n");
 		}
 
-		isRMCExist = 0;
-	}
-	else{
-		Debug_printf("\n\n------------ GPS MODULE BUG: NO RMC FOUND ------------\n\n");
-	}
 
+        // Clear RMC data after processing
+        memset(rmc_str, 0x00, sizeof(rmc_str));
+        isRMCExist = 0;
+    }
+
+    // GPS timeout logic
+    if (getRMC_time >= 150 && getRMC_time % 150 == 0) {
+        Debug_printf("\n\n-------------------  COLD START GPS module -----------------------\n\n");
+        coldStart();
+    }
+
+    if (getRMC_time >= 500) {
+        GPS_DISABLE();
+        osDelay(500);
+        GPS_ENABLE();
+        getRMC_time = 0;
+    }
+
+    Debug_printf("Elapsed Time: %d\n", getRMC_time);
+}
+//void getRMC(){
+////	int idx = 0;
+//	getRMC_time++;
+////	int length = 0;
+////	for(size_t i = 0; i < GPS_STACK_SIZE; i++){
+////		if (gpsSentence[i] == '$' && gpsSentence[i+1] == 'G' && gpsSentence[i+2] == 'N' && gpsSentence[i+3] == 'R' && gpsSentence[i+4] == 'M' && gpsSentence[i+5] == 'C'
+////			&& (GPS_STACK_SIZE -i) > 200 ){
+////			isRMCExist = 1;
+////			HAL_UART_Transmit(&huart1, (uint8_t *)"Getting RMC\n", strlen("Getting RMC\n"), 1000);
+////			while(gpsSentence[i+1] != 0x0A ){
+////				rmc_str[idx] = gpsSentence[i];
+////				idx++;
+////				i++;
+////			}
+////			length = idx;
+////			idx = 0;
+////			break;
+////		}
+////	 }
+////	for(size_t i = length; i < 128; i++){
+////		rmc_str[i] = 0;
+////	}
+//	ProcessDMAData();
+//	if(isRMCExist == 1){
+//		parse_rmc(rmc_str);
+//		display_rmc_data(&huart1);
+////		set_time(rmc.tim.hour, rmc.tim.min, rmc.tim.sec);
+////		set_date(rmc.date.Yr, rmc.date.Mon, rmc.date.Day);
+//		get_RTC_time_date(&rmc);
+//
+//		if(rmc.isValid == 1 &&
+//		  (rmc_saved.isValid == 0 || isWithinThreshold(rmc_saved.lcation.latitude, rmc_saved.lcation.longitude, rmc.lcation.latitude, rmc.lcation.longitude, 1.0))
+//		   ){
+//			Debug_printf("\n\n------------ Sending RMC at GPS------------\n\n");
+//			sendRMCDataToFlash(&rmc);
+//			if(rmc.date.Yr >= 24)
+//				count_send_gps++;
+//			getRMC_time = 0;
+//			copy_RMC(&rmc_saved, &rmc);
+//		}
+//		else{
+//			if(rmc_saved.isValid == 1){
+//				Debug_printf("\n\n------------ GPS BUG: Sending latest RMC at GPS------------\n\n");
+//				get_RTC_time_date(&rmc_saved);
+//				sendRMCDataToFlash(&rmc_saved);
+//				count_send_gps++;
+//			}
+//			else{
+//				Debug_printf("\n\n--------------------------------- DATA FROM GPS MODULE IS NOT VALID YET -----------------------------\n\n");
+//			}
+//		}
+//
+////		GPSUART_ReInitializeRxDMA();
+//		memset(gpsSentence, 0x00, GPS_STACK_SIZE);
+//		isRMCExist = 0;
+//	}
+//	else{
+//		Debug_printf("\n\n------------ GPS MODULE BUG: NO RMC FOUND ------------\n\n");
+//	}
+//
 //	if(getRMC_time >= 150 && getRMC_time % 150 == 0){
 //		Debug_printf("\n\n-------------------  COLD START GPS module -----------------------\n\n");
 //		coldStart();
 //	}
-	if(getRMC_time >= 500){
-		GPS_DISABLE();
-		osDelay(500);
-		GPS_ENABLE();
-		getRMC_time = 0;
-	}
-	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
-//	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
-//	HAL_UART_Transmit(&huart1, (uint8_t*)"\n",1, 1000);
-}
+//	if(getRMC_time >= 500){
+//		GPS_DISABLE();
+//		osDelay(500);
+//		GPS_ENABLE();
+//		getRMC_time = 0;
+//	}
+//	Debug_printf("Elapsed Time blabla: %d\n", getRMC_time);
+////	HAL_UART_Transmit(&huart1, rmc_str, 128,1000);
+////	HAL_UART_Transmit(&huart1, (uint8_t*)"\n",1, 1000);
+//}
 
 
 void StartGPS(void const * argument)
@@ -329,36 +428,46 @@ void StartGPS(void const * argument)
 	Debug_printf("\n\n--------------------STARTING GPS ---------------------\n\n");
 	/* USER CODE BEGIN StartGPS */
 
-//	/* Infinite loop */
-//	rmc.tim.hour = 0;
-//	rmc.tim.min = 0;
-//	rmc.tim.sec = 0;
-//	rmc.lcation.latitude = 20.998022;
-//	rmc.lcation.longitude = 105.794756;
-//	rmc.speed = 22.4;
-//	rmc.course = 30.5;
-//	rmc.lcation.NS = 'N';
-//	rmc.lcation.EW = 'E';
-//	rmc.isValid = 1;
-//	rmc.date.Day = 0;
-//	rmc.date.Mon = 0;
-//	rmc.date.Yr = 0;
+	/* Infinite loop */
+
+	rmc_saved = readFlash(0x9000);
+	Debug_printf("\n-------------------------- BACK UP GPS FROM FLASH ----------------------- \n");
+	if(rmc_saved.isValid == 0){
+		Debug_printf("There is not back up GPS from FLASH");
+		rmc_saved.tim.hour = 0;
+		rmc_saved.tim.min = 0;
+		rmc_saved.tim.sec = 0;
+		rmc_saved.lcation.latitude = 20.998022;
+		rmc_saved.lcation.longitude = 105.794756;
+		rmc_saved.speed = 22.4;
+		rmc_saved.course = 30.5;
+		rmc_saved.lcation.NS = 'N';
+		rmc_saved.lcation.EW = 'E';
+		rmc_saved.isValid = 1;
+		rmc_saved.date.Day = 0;
+		rmc_saved.date.Mon = 0;
+		rmc_saved.date.Yr = 0;
+	}
 
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
-//		osThreadId_t thread1 = osThreadGetId();
-//		uint32_t freeStack1 = osThreadGetStackSpace(thread1);
-//
-//		Debug_printf("Thread GPS %p is running low on stack: %04d bytes remaining\n", thread1, freeStack1);
 		Debug_printf("\n\n----------------------- Inside GPS ------------------------\n\n");
+		uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
+		Debug_printf("Thread GPS %p is running low on stack: %04d bytes remaining\n", GPSHandle, freeStack2);
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 		osDelay(500);
 		getRMC();
+		Debug_printf("\n\n ---------------------------------------------- COUNT SEND GPS: %d ---------------------------------------- \n\n", count_send_gps);
+		if(count_send_gps == 29)
+			count_send_gps = 0;
+//		Debug_printf("\n------------------------------ GPS SENTENCE ------------------------------\n");
+//		Debug_printf((char*) gpsSentence);
 		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
 		osDelay(500);
 	}
+
   /* USER CODE END StartGPS */
 }
 

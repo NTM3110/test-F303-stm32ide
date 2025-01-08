@@ -1,2 +1,3 @@
-../Core/Src/system_management.c:6:6:uart_transmit_string	1
-../Core/Src/system_management.c:11:6:Debug_printf	1
+../Core/Src/system_management.c:10:6:uart_transmit_string	1
+../Core/Src/system_management.c:14:6:Uint32ToHex	3
+../Core/Src/system_management.c:23:6:Debug_printf	4
