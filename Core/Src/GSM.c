@@ -900,6 +900,71 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 	return 1;
 }
 
+int acknowledgeResponse(int connect_id){
+	uint8_t command[256];
+	int count_check = 0;
+	int count_resend = 0;
+	int is_sent_ok = 0;
+
+
+	while(count_resend < 3){
+		is_sent_ok = 1;
+		snprintf((char *)command, sizeof(command), "AT+QISEND=%d,0\r\n", connect_id);
+		send_AT_command((char*)command);
+		Debug_printf("\n\n---------------- IN QISEND:0X0 SENDING COUNT: %d ------------------\n\n", count_resend);
+		while(strstr((char *) response, CHECK_RESPONSE) == NULL){
+			char output_elapsed[128];
+			osDelay(100);
+			if(count_check >= 50){
+				count_check = 0;
+				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+				SIM_UART_ReInitializeRxDMA();
+				send_AT_command((char*)command);
+				is_sent_ok = 0;
+				break;
+			}
+			if (strstr((char*) response, "ERROR") != NULL){
+				Debug_printf("\n\n---------------- IN QISEND: 0X0: ERROR ------------------\n\n");
+				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+				SIM_UART_ReInitializeRxDMA();
+				send_AT_command((char*)command);
+				is_sent_ok = 0;
+				break;
+			}
+			is_sent_ok = 1;
+			count_check++;
+
+			snprintf(output_elapsed, 128, "Elapsed Time +QISEND: 0,0: %d\n", count_check);
+			uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
+			receive_response("Check sending to server\n");
+		}
+
+		if(is_sent_ok == 0) {
+			count_resend++;
+			continue;
+		}
+		receive_response("Check sending to server\n");
+		int sentBytes, ackedBytes, unackedBytes;
+
+		int result = sscanf((char*)response, "AT+QISEND=0,0 +QISEND: %d,%d,%d", &sentBytes, &ackedBytes, &unackedBytes);
+		snprintf((char *)output, 128, "Lost Transmit BYTES: %d\n", unackedBytes);
+		uart_transmit_string(&huart1, output);
+		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+		SIM_UART_ReInitializeRxDMA();
+		if (result == 3) {
+			if (unackedBytes > 0) {
+				count_resend++;
+				is_sent_ok = 0;
+			}
+			else{
+				Debug_printf("NO DATA LOSS\n");
+				break;
+			}
+		}
+	}
+	return is_sent_ok;
+}
+
 
 int check_data_sent_to_server(int connect_id){
 	uint8_t command[256];
