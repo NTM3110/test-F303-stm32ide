@@ -735,6 +735,24 @@ void StartSpiFlash(void const * argument)
 //		Debug_printf("\n\n ----------------- Failed to create mutex -----------------\n\n");
 //	}
 //	Debug_printf("\n\n --------------------Creating a MESSAGE QUEUE --------------------- \n\n");
+	rmc_saved = readFlash(0x9000);
+	Debug_printf("\n-------------------------- BACK UP GPS FROM FLASH ----------------------- \n");
+	if(rmc_saved.isValid == 0){
+		Debug_printf("There is not back up GPS from FLASH");
+		rmc_saved.tim.hour = 0;
+		rmc_saved.tim.min = 0;
+		rmc_saved.tim.sec = 0;
+		rmc_saved.lcation.latitude = 20.998022;
+		rmc_saved.lcation.longitude = 105.794756;
+		rmc_saved.speed = 22.4;
+		rmc_saved.course = 30.5;
+		rmc_saved.lcation.NS = 'N';
+		rmc_saved.lcation.EW = 'E';
+		rmc_saved.isValid = 1;
+		rmc_saved.date.Day = 0;
+		rmc_saved.date.Mon = 0;
+		rmc_saved.date.Yr = 0;
+	}
 
 	for(;;){
 //		if(osMutexAcquire(myMutex, osWaitForever) == osOK) {

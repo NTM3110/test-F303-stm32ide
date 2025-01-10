@@ -103,6 +103,10 @@ void coldStart(void){
 	HAL_UART_Transmit(&huart2, (uint8_t*)"$PMTK104*37\r\n", strlen("$PMTK104*37\r\n"), 2000);
 }
 
+void enableEASYFuntion(void){
+	HAL_UART_Transmit(&huart2, (uint8_t*)"$PMTK869,1,1*35\r\n", strlen("$PMTK869,1,1*35\r\n"), 2000);
+}
+
 // Function to validate the checksum of an NMEA sentence
 int validateChecksum(uint8_t *nmeaSentence, size_t len) {
     const uint8_t *start = nmeaSentence;  // Start of the sentence (after '$')
@@ -162,7 +166,7 @@ void display_rmc_data() {
 }
 
 time_t convertToEpoch(int year, int month, int day, int hour, int min, int sec) {
-    struct tm timeinfo;
+    struct tm timeinfo = {0};
 
     // Set timeinfo fields
     timeinfo.tm_year = year + 100; // Year since 1900
@@ -182,7 +186,7 @@ time_t convertToEpoch(int year, int month, int day, int hour, int min, int sec) 
 void parse_rmc(uint8_t *rmc_sentence) {
     int field = 0;
     uint8_t str_cpy[128];
-    strcpy(str_cpy, rmc_sentence);
+    strcpy((char*)str_cpy,(char*) rmc_sentence);
     str_cpy[sizeof(str_cpy) - 1] = '\0';
 
     Debug_printf("\n");
@@ -303,7 +307,7 @@ void getRMC() {
     // Process `$GNRMC` sentence if detected
     if (isRMCExist) {
 		parse_rmc(rmc_str);// Parse the `$GNRMC` sentence
-		display_rmc_data();
+		//display_rmc_data();
 		get_RTC_time_date(&rmc);
 
 //		if (rmc.isValid &&
@@ -315,7 +319,7 @@ void getRMC() {
 			sendRMCDataToFlash(&rmc);
 			count_send_gps++;
 			getRMC_time = 0;
-			copy_RMC(&rmc_saved, &rmc);
+			rmc_saved = rmc;
 		} else if (rmc_saved.isValid) {
 			Debug_printf("\n\n------------ GPS BUG: Sending latest RMC ------------\n\n");
 			get_RTC_time_date(&rmc_saved);
@@ -429,25 +433,6 @@ void StartGPS(void const * argument)
 	/* USER CODE BEGIN StartGPS */
 
 	/* Infinite loop */
-
-	rmc_saved = readFlash(0x9000);
-	Debug_printf("\n-------------------------- BACK UP GPS FROM FLASH ----------------------- \n");
-	if(rmc_saved.isValid == 0){
-		Debug_printf("There is not back up GPS from FLASH");
-		rmc_saved.tim.hour = 0;
-		rmc_saved.tim.min = 0;
-		rmc_saved.tim.sec = 0;
-		rmc_saved.lcation.latitude = 20.998022;
-		rmc_saved.lcation.longitude = 105.794756;
-		rmc_saved.speed = 22.4;
-		rmc_saved.course = 30.5;
-		rmc_saved.lcation.NS = 'N';
-		rmc_saved.lcation.EW = 'E';
-		rmc_saved.isValid = 1;
-		rmc_saved.date.Day = 0;
-		rmc_saved.date.Mon = 0;
-		rmc_saved.date.Yr = 0;
-	}
 
 	RingBufferDmaU8_initUSARTRx(&GPSRxDMARing, &huart2, gpsSentence, GPS_STACK_SIZE);
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);

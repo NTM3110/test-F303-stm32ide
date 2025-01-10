@@ -348,6 +348,7 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 	uart_transmit_string(&huart1, (uint8_t *)" \n");
 }
 
+
 int extractCSQValues(const char *input, int *rssi, int *ber) {
     char *start = strstr(input, "+CSQ: ");
     if (start) {
@@ -363,12 +364,22 @@ int extractCSQValues(const char *input, int *rssi, int *ber) {
     return -1; // Failure
 }
 
+int has_number(const char *str) {
+    while (*str) {
+        if (*str >= '0' && *str <= '9') {
+            return 1; // Found a digit
+        }
+        str++;
+    }
+    return 0; // No digits found
+}
+
 int check_SIM_ready(){
 	const int TIME_LIMIT = 5;
 	int count_check_sim = 0;
 	//GET IMEI
 	send_AT_command(GET_IMEI);
-	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
+	while(strstr((char *) response, CHECK_RESPONSE) == NULL && has_number((char*) response) == 0){
 		count_check_sim++;
 		if (count_check_sim >= 5){
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
@@ -499,6 +510,8 @@ int check_SIM_ready(){
 	SIM_UART_ReInitializeRxDMA();
 	count_check_sim = 0;
 	return 1;
+
+
 }
 
 void check_configure_APN(){

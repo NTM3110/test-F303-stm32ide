@@ -116,6 +116,7 @@ extern osThreadId_t SpiFlashHandle;
 #define PAGE_SIZE           0x80
 
 
+extern RMCSTRUCT rmc_saved;
 
 extern uint8_t count_shiftleft;
 

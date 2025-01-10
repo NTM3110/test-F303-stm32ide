@@ -14,7 +14,7 @@
 #define APN_PASSWD									""
 #define APN_AUTHEN									0
 #define SERVICE_TYPE 								"TCP"
-#define IP_ADDRESS									"142.4.205.26"
+#define IP_ADDRESS									"188.245.151.94"
 #define REMOTE_PORT									5015
 #define CHECK_RESPONSE								"OK"
 //#define TERMINAL_REGISTRATION_DEMO 				"7E0100002D001234567891000300000000000000000041354D00000000000000000000000000000000003536373839312002D4C1413030303030CD7E"
@@ -75,6 +75,7 @@ typedef struct {
 #define CHECK_SIGNAL_QUALITY						"AT+CSQ\r\n"
 #define CHECK_CONFIGURE_APN							"AT+QICSGP=1\r\n"
 #define CHECK_ACTIVATE_CONTEXT						"AT+QIACT?\r\n"
+#define CONFIG_URC_PORT								"AT+QURCCFG=\"urcport\",\"uart1\""
 
 
 extern RTC_HandleTypeDef hrtc;

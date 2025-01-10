@@ -6,7 +6,7 @@
 #define GPS_GPIO_Port		GPIOC	
 #define GPS_GPIO_Pin		GPIO_PIN_2
 
-#define GPS_STACK_SIZE 		7424
+#define GPS_STACK_SIZE 		5760
 
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart1;

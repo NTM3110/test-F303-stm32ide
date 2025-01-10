@@ -11,4 +11,4 @@
 ../Core/Src/GPS.c:254:6:sendRMCDataToFlash	8	static
 ../Core/Src/GPS.c:266:5:handleIncomingChar	16	static
 ../Core/Src/GPS.c:287:6:getRMC	16	static
-../Core/Src/GPS.c:426:6:StartGPS	112	static
+../Core/Src/GPS.c:426:6:StartGPS	24	static

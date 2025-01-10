@@ -98,7 +98,7 @@ const osThreadAttr_t SpiFlash_attributes = {
 };
 /* Definitions for GPS */
 osThreadId_t GPSHandle;
-uint32_t GPSBuffer[ 480 ];
+uint32_t GPSBuffer[ 512 ];
 osStaticThreadDef_t GPSControlBlock;
 const osThreadAttr_t GPS_attributes = {
   .name = "GPS",
@@ -117,7 +117,7 @@ const osThreadAttr_t RFID_attributes = {
 };
 /* Definitions for GSM */
 osThreadId_t GSMHandle;
-uint32_t GSMBuffer[ 896 ];
+uint32_t GSMBuffer[ 1024 ];
 osStaticThreadDef_t GSMControlBlock;
 const osThreadAttr_t GSM_attributes = {
   .name = "GSM",
@@ -300,13 +300,12 @@ int main(void)
 //
 //  /* creation of UART1 */
 //  UART1Handle = osThreadNew(StartUART1, NULL, &UART1_attributes);
-  /* creation of GPS */
-  GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
 
   /* creation of SpiFlash */
   SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
 
-
+  /* creation of GPS */
+  GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
 
   /* creation of RFID */
 //  RFIDHandle = osThreadNew(StartRFID, NULL, &RFID_attributes);
