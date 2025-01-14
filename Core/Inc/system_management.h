@@ -12,8 +12,6 @@ extern UART_HandleTypeDef huart1;
 extern int is_saving_debug;
 
 void Uint32ToHex(uint32_t value, char *output, uint8_t width);
-void uart_transmit_string(UART_HandleTypeDef *huart, uint8_t *string);
-
-void Debug_printf(const char *format, ...);
+void Delay_ms(uint32_t duration_ms);
 
 #endif

@@ -187,7 +187,7 @@ void Bill_Decode(){
 void handleCmd(uint8_t *buffer){
     // Check for start_cmd
     if (strstr((char*) buffer, (char*)start_cmd)) {
-        Debug_printf("Start command found! Handling START SAVE DEBUG logic...\n");
+        printf("Start command found! Handling START SAVE DEBUG logic...\n");
         is_saving_debug = 1;
         W25_Reset();
         W25_SectorErase(DEBUG_START_ADDRESS);
@@ -196,13 +196,13 @@ void handleCmd(uint8_t *buffer){
 
     // Check for end_cmd
     if (strstr((char*) buffer, (char*)end_cmd)) {
-        Debug_printf("End command found! Handling END_SAVE_DEBUG logic...\n");
+        printf("End command found! Handling END_SAVE_DEBUG logic...\n");
         while(current_addr_rs232 < 0x8000){
-        	Debug_printf("SHOW ALL THE DEBUG SAVED IN FLASH: UNTIL");
+        	printf("SHOW ALL THE DEBUG SAVED IN FLASH: UNTIL");
         	W25_Reset();
         	W25_ReadData(current_addr_rs232, current_debug_page, 256);
-        	Debug_printf((char*)current_debug_page);
-        	Debug_printf("\n");
+        	printf((char*)current_debug_page);
+        	printf("\n");
         	current_addr_rs232 += 256;
         	osDelay(200);
         }
@@ -221,8 +221,8 @@ void getCmd(){
 		}
 	}
 	if(is_get_cmd == 1){
-		Debug_printf((char*)gsvSentence);
-		Debug_printf("\n\n");
+		printf((char*)gsvSentence);
+		printf("\n\n");
 		handleCmd(gsvSentence);
 		memset(gsvSentence, 0x00, 2048);
 		rs232Ext2_InitializeRxDMA();

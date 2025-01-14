@@ -24,12 +24,11 @@
 /* USER CODE BEGIN Includes */
 #include "system_management.h"
 #include "spi_flash.h"
+#include <stdio.h>
 
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
-typedef StaticTask_t osStaticThreadDef_t;
-typedef StaticQueue_t osStaticMessageQDef_t;
 /* USER CODE BEGIN PTD */
 /* USER CODE END PTD */
 
@@ -60,6 +59,7 @@ UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 UART_HandleTypeDef huart3;
 DMA_HandleTypeDef hdma_usart1_rx;
+DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart3_rx;
 
@@ -86,26 +86,16 @@ const osThreadAttr_t UART1_attributes = {
 };
 /* Definitions for SpiFlash */
 osThreadId_t SpiFlashHandle;
-uint32_t SpiFlashBuffer[ 1536 ];
-osStaticThreadDef_t SpiFlashControlBlock;
 const osThreadAttr_t SpiFlash_attributes = {
   .name = "SpiFlash",
-  .cb_mem = &SpiFlashControlBlock,
-  .cb_size = sizeof(SpiFlashControlBlock),
-  .stack_mem = &SpiFlashBuffer[0],
-  .stack_size = sizeof(SpiFlashBuffer),
+  .stack_size = 1280 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for GPS */
 osThreadId_t GPSHandle;
-uint32_t GPSBuffer[ 512 ];
-osStaticThreadDef_t GPSControlBlock;
 const osThreadAttr_t GPS_attributes = {
   .name = "GPS",
-  .cb_mem = &GPSControlBlock,
-  .cb_size = sizeof(GPSControlBlock),
-  .stack_mem = &GPSBuffer[0],
-  .stack_size = sizeof(GPSBuffer),
+  .stack_size = 480 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for RFID */
@@ -117,48 +107,30 @@ const osThreadAttr_t RFID_attributes = {
 };
 /* Definitions for GSM */
 osThreadId_t GSMHandle;
-uint32_t GSMBuffer[ 1024 ];
-osStaticThreadDef_t GSMControlBlock;
 const osThreadAttr_t GSM_attributes = {
   .name = "GSM",
-  .cb_mem = &GSMControlBlock,
-  .cb_size = sizeof(GSMControlBlock),
-  .stack_mem = &GSMBuffer[0],
-  .stack_size = sizeof(GSMBuffer),
+  .stack_size = 896 * 4,
   .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for RMC_MailQFLASHId */
 osMessageQueueId_t RMC_MailQFLASHIdHandle;
-uint8_t RMC_MailQFLASHIdBuffer[ 3 * 88 ];
-osStaticMessageQDef_t RMC_MailQFLASHIdControlBlock;
 const osMessageQueueAttr_t RMC_MailQFLASHId_attributes = {
-  .name = "RMC_MailQFLASHId",
-  .cb_mem = &RMC_MailQFLASHIdControlBlock,
-  .cb_size = sizeof(RMC_MailQFLASHIdControlBlock),
-  .mq_mem = &RMC_MailQFLASHIdBuffer,
-  .mq_size = sizeof(RMC_MailQFLASHIdBuffer)
+  .name = "RMC_MailQFLASHId"
 };
 /* Definitions for RMC_MailQGSMId */
 osMessageQueueId_t RMC_MailQGSMIdHandle;
-uint8_t RMC_MailQGSMIdBuffer[ 64 * 96 ];
-osStaticMessageQDef_t RMC_MailQGSMIdControlBlock;
 const osMessageQueueAttr_t RMC_MailQGSMId_attributes = {
-  .name = "RMC_MailQGSMId",
-  .cb_mem = &RMC_MailQGSMIdControlBlock,
-  .cb_size = sizeof(RMC_MailQGSMIdControlBlock),
-  .mq_mem = &RMC_MailQGSMIdBuffer,
-  .mq_size = sizeof(RMC_MailQGSMIdBuffer)
+  .name = "RMC_MailQGSMId"
 };
 /* Definitions for tax_MailQId */
 osMessageQueueId_t tax_MailQIdHandle;
-uint8_t tax_MailQIdBuffer[ 1 * 128 ];
-osStaticMessageQDef_t tax_MailQIdControlBlock;
 const osMessageQueueAttr_t tax_MailQId_attributes = {
-  .name = "tax_MailQId",
-  .cb_mem = &tax_MailQIdControlBlock,
-  .cb_size = sizeof(tax_MailQIdControlBlock),
-  .mq_mem = &tax_MailQIdBuffer,
-  .mq_size = sizeof(tax_MailQIdBuffer)
+  .name = "tax_MailQId"
+};
+/* Definitions for myMutex */
+osMutexId_t myMutexHandle;
+const osMutexAttr_t myMutex_attributes = {
+  .name = "myMutex"
 };
 /* USER CODE BEGIN PV */
 
@@ -186,19 +158,39 @@ void StartRFID(void *argument);
 void StartGSM(void *argument);
 
 /* USER CODE BEGIN PFP */
+// Function to check if a line matches the specified format
+int matches_format(const char *line);
+
+// Function to process received UART characters and detect lines
+void process_uart_character(uint8_t ch);
+
+#ifdef __GNUC__
+#define PUTCHAR_PROTOTYPE int __io_putchar(int ch)
+#else
+#define PUTCHAR_PROTOTYPE int fputc(int ch, FILE *f)
+#endif
+
+PUTCHAR_PROTOTYPE
+{
+  HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 1000);
+  return ch;
+}
+
+
 void Initialize_RTC(void) {
     // Enable Power Clock
     __HAL_RCC_PWR_CLK_ENABLE();
 
     // Allow access to the backup domain
+    hrtc.Instance = RTC;
     HAL_PWR_EnableBkUpAccess();
     if (HAL_RTCEx_BKUPRead(&hrtc, RTC_BKP_DR1) != RTC_INIT_FLAG) {
-    	Debug_printf("\n--------------------------------------------- FIRST TIME RTC INITIALISATION ----------------------------------------------\n");
+    	printf("\n--------------------------------------------- FIRST TIME RTC INITIALISATION ----------------------------------------------\n");
         // First-time initialization
         MX_RTC_Init();  // Configure RTC
         HAL_RTCEx_BKUPWrite(&hrtc, RTC_BKP_DR1, RTC_INIT_FLAG);  // Store initialization flag
     } else {
-    	Debug_printf("\n-------------------------------------------- BACK UP RTC:  GETTING RTC FROM BACK UP ----------------------------------------\n");
+    	printf("\n-------------------------------------------- BACK UP RTC:  GETTING RTC FROM BACK UP ----------------------------------------\n");
         // RTC is already configured, just read the time
         RTC_TimeTypeDef sTime;
         RTC_DateTypeDef sDate;
@@ -209,6 +201,8 @@ void Initialize_RTC(void) {
     }
 
 }
+
+
 
 /* USER CODE END PFP */
 
@@ -248,6 +242,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
+//  MX_RTC_Init();
   MX_SPI1_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
@@ -262,6 +257,16 @@ int main(void)
 
   /* Init scheduler */
   osKernelInitialize();
+  /* Create the mutex(es) */
+  /* creation of myMutex */
+  myMutexHandle = osMutexNew(&myMutex_attributes);
+
+  if (myMutexHandle == NULL) {
+      printf("Mutex creation failed!\n");
+      while (1);  // If mutex creation fails, halt here
+  } else {
+      printf("Mutex created successfully!\n");
+  }
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -281,7 +286,7 @@ int main(void)
   RMC_MailQFLASHIdHandle = osMessageQueueNew (3, 88, &RMC_MailQFLASHId_attributes);
 
   /* creation of RMC_MailQGSMId */
-  RMC_MailQGSMIdHandle = osMessageQueueNew (64, 96, &RMC_MailQGSMId_attributes);
+  RMC_MailQGSMIdHandle = osMessageQueueNew (32, 96, &RMC_MailQGSMId_attributes);
 
   /* creation of tax_MailQId */
   tax_MailQIdHandle = osMessageQueueNew (1, 128, &tax_MailQId_attributes);
@@ -310,14 +315,14 @@ int main(void)
 //  RFIDHandle = osThreadNew(StartRFID, NULL, &RFID_attributes);
 
   /* creation of GSM */
-  GSMHandle = osThreadNew(StartGSM, NULL, &GSM_attributes);
+//  GSMHandle = osThreadNew(StartGSM, NULL, &GSM_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
-  /* add threads, ... */
+//  /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
-  /* add events, ... */
+//  /* add events, ... */
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
@@ -824,6 +829,9 @@ static void MX_DMA_Init(void)
   /* DMA1_Channel3_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel3_IRQn);
+  /* DMA1_Channel4_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Channel4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Channel4_IRQn);
   /* DMA1_Channel5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA1_Channel5_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(DMA1_Channel5_IRQn);
@@ -917,7 +925,50 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// Function to check if a line matches the specified format
+int matches_format(const char *line) {
+    const char *format = "@@@ GSM-> time: %d:%d:%d --------- date: %d/%d/%d  --------- current_addr: %08x @@@";
+    int hours, minutes, seconds, day, month, year;
+    uint32_t current_addr;
 
+    // Parse the line to check if it matches the format
+    int ret = sscanf(line, format, &hours, &minutes, &seconds, &day, &month, &year, &current_addr);
+
+    return ret == 7; // Return 1 if all fields are successfully parsed, otherwise 0
+}
+
+// Function to process received UART characters and detect lines
+void process_uart_character(uint8_t ch) {
+    static char buffer[128];
+    static size_t buffer_index = 0;
+    static int skip_line = 0; // Flag to indicate if we're skipping the current line
+
+    if (skip_line) {
+        // Skip characters until we find a newline
+        if (ch == '\n') {
+            skip_line = 0; // Reset the flag to stop skipping
+        }
+        return;
+    }
+
+    // Check for end of line
+    if (ch == '\n') {
+        buffer[buffer_index] = '\0'; // Null-terminate the string
+        if (matches_format(buffer)) {
+            printf("Detected valid line: %s\n", buffer);
+        } else {
+            printf("Invalid line: %s\n", buffer);
+        }
+        buffer_index = 0; // Reset the buffer for the next line
+    } else if (buffer_index < 128 - 1) {
+        buffer[buffer_index++] = (char)ch; // Add character to the buffer
+    } else {
+        // Buffer is full; skip the rest of the line
+        skip_line = 1;
+        buffer_index = 0; // Reset the buffer
+        printf("Line too long, skipping...\n");
+    }
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -937,6 +988,7 @@ void StartDefaultTask(void *argument)
   }
   /* USER CODE END 5 */
 }
+
 
 /**
   * @brief  Period elapsed callback in non blocking mode

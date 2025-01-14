@@ -13,8 +13,7 @@
 #include "Queue_GSM.h"
 
 
-uint8_t TERMINAL_REGISTRATION[128];
-uint8_t response[SIM_RESPONSE_MAX_SIZE];
+uint8_t response[SIM_RESPONSE_MAX_SIZE] = {0};
 RingBufferDmaU8_TypeDef SIMRxDMARing;
 int is_activated = 0;
 int is_set_time = 0;
@@ -36,14 +35,14 @@ volatile uint32_t start_addr_disconnect = 0;
 volatile uint32_t current_addr_gsm = 0;
 volatile uint32_t end_addr_disconnect = 0;
 
-char addr_out_gsm[10];
+char addr_out_gsm[10] = {0};
 
 extern osMessageQueueId_t RMC_MailQGSMIdHandle;
 
 //int is_40s = 0;
-RMCSTRUCT rmc_jt;
+RMCSTRUCT rmc_jt = {0};
 uint8_t terminal_phone_number[6] = {0};
-GSM_MAIL_STRUCT receivedDataGSM;
+GSM_MAIL_STRUCT receivedDataGSM = {0};
 
 
 JT808_TerminalRegistration create_terminal_registration(){
@@ -135,7 +134,7 @@ uint8_t *convert_location_info_to_array(JT808_LocationInfoReport *location_info,
 }
 
 void send_AT_command(const char *command) {
-    HAL_UART_Transmit(&huart3, (uint8_t *)command, strlen(command), HAL_MAX_DELAY);
+    HAL_UART_Transmit(&huart3, (uint8_t *)command, strlen(command), 5000);
 }
 
 void SIM_UART_ReInitializeRxDMA(void){
@@ -158,11 +157,11 @@ int find_length(uint8_t *str){
 		
 }
 
-void receive_response(char *cmd_str) {
-	Debug_printf("Response at command: %s\n", cmd_str);
+void receive_response() {
+	printf("\n");
 	//while(response[1] == '\0'){}
-	Debug_printf((char *)response);
-	Debug_printf("\n");
+	printf((char *)response);
+	printf("\n");
 //	osDelay(1000);
 }
 
@@ -234,69 +233,67 @@ int first_check_SIM()
 	SIM_UART_ReInitializeRxDMA();
 	while(strstr((char *) response, substring) == NULL)
 	{
-		receive_response("WAITING FOR SIM MODULE TO BE READY\n");
+		receive_response();
 		osDelay(1000);
-		if (count_check >= 40){
-			Debug_printf("OUT OF WAITING FOR SIM MODULE\n");
+		if (count_check >= 60){
+			printf("OUT OF WAITING FOR SIM MODULE\n");
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
-		osDelay(200);
 	}
-	receive_response("WAITING FOR SIM MODULE TO BE READY\n");
-	osDelay(1000);
+	receive_response();
+	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 	count_check = 0;
+	osDelay(100);
 
-	send_AT_command(FIRST_CHECK);
-	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
-		receive_response("First check SIM MODULE\n");
-		if (count_check >= 5){
-			Debug_printf("OUT OF FIRST CHECK SIM MODULE\n");
-			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			SIM_UART_ReInitializeRxDMA();
-			return 0;
-		}
-		osDelay(1000);
-	}
-	receive_response("First check SIM MODULE\n");
-	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-	SIM_UART_ReInitializeRxDMA();
-	count_check = 0;
 
-	send_AT_command("AT+CPAS\r\n");
-	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
-		receive_response("Check status of SIM MODULE\n");
-		if (count_check >= 5){
-			Debug_printf("OUT OF CPAS\n");
+	for(size_t i = 0; i < 3 ; i++){
+		send_AT_command(FIRST_CHECK);
+		osDelay(300);
+		receive_response();
+		if(strstr((char *) response, CHECK_RESPONSE) != NULL){
+			printf("SEND AT successfully");
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
-			return 0;
+			break;
 		}
-		osDelay(1000);
+		else{
+			if(i == 2){
+				printf("Send AT failed -> RESTART SIM MODULE\n");
+				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+				SIM_UART_ReInitializeRxDMA();
+				return 0;
+			}
+		}
+		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+		SIM_UART_ReInitializeRxDMA();
+		osDelay(100);
 	}
-	receive_response("Check status of SIM MODULE\n");
-	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-	SIM_UART_ReInitializeRxDMA();
-	count_check = 0;
-
-	send_AT_command("AT+CMEE=2\r\n");
-	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
-		receive_response("Check enable result code\n");
-		if (count_check >= 5){
-			Debug_printf("OUT OF CMEE\n");
+	for(size_t i = 0; i < 3 ; i++){
+		send_AT_command("AT+CMEE=2\r\n");
+		osDelay(300);
+		receive_response();
+		if(strstr((char *) response, CHECK_RESPONSE) != NULL){
+			printf("SEND CMEE successfully");
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
-			return 0;
+			break;
 		}
-		osDelay(1000);
+		else{
+			if(i == 2){
+				printf("Send AT+CMEE failed -> RESTART SIM MODULE\n");
+				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+				SIM_UART_ReInitializeRxDMA();
+				return 0;
+			}
+		}
+		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+		SIM_UART_ReInitializeRxDMA();
+		osDelay(100);
 	}
-	receive_response("Check enable result code\n");
-	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-	SIM_UART_ReInitializeRxDMA();
-	count_check = 0;
 
 	return 1;
 }
@@ -310,10 +307,8 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 					   start[6] == 'N' && start[7] == '=' && start[8] == '1')) {
 		start++;
 	}
-//	uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number: ");
-//	uart_transmit_string( &huart1,(uint8_t *) start);
-	Debug_printf("Inside Checking terminal Number: ");
-	Debug_printf((char*)start);
+//	printf("Inside Checking terminal Number: ");
+//	printf((char*)start);
 	// If "AT+CGSN=1" is found, move to the start of the number (skip "AT+CGSN=1 ")
 	if (*start) {
 		start += 10;  // Move pointer past "AT+CGSN=1 "
@@ -330,7 +325,7 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 			end++;
 			digit_count++;
 		}
-		uart_transmit_string(&huart1, (uint8_t *)"Inside Checking terminal Number-2: LEN ");
+		printf("Inside Checking terminal Number-2: LEN ");
 		snprintf((char*)output_buffer, 10, "%d", digit_count);
 
 
@@ -343,9 +338,9 @@ void extract_last_12_digits_bcd(const uint8_t *response, uint8_t *output) {
 			}
 		}
 	}
-	uart_transmit_string(&huart1, (uint8_t *)" Check terminal Number-0: ");
-	uart_transmit_string(&huart1, output);
-	uart_transmit_string(&huart1, (uint8_t *)" \n");
+//	printf(&huart1, (uint8_t *)" Check terminal Number-0: ");
+//	printf(&huart1, output);
+//	printf(&huart1, (uint8_t *)" \n");
 }
 
 
@@ -374,6 +369,7 @@ int has_number(const char *str) {
     return 0; // No digits found
 }
 
+
 int check_SIM_ready(){
 	const int TIME_LIMIT = 5;
 	int count_check_sim = 0;
@@ -386,14 +382,12 @@ int check_SIM_ready(){
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
-		receive_response("Check IMEI-0:\n");
+//		receive_response();
 		osDelay(1000);
 	}
-	receive_response("Check IMEI-0:\n");
+	receive_response();
 	extract_last_12_digits_bcd(response, terminal_phone_number);
-	uart_transmit_string(&huart1, (uint8_t *)" Check terminal Number: ");
-	uart_transmit_string(&huart1, terminal_phone_number);
-	uart_transmit_string(&huart1, (uint8_t *)" \n");
+	printf(" Check terminal Number: %s\n", terminal_phone_number);
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -403,7 +397,7 @@ int check_SIM_ready(){
 	send_AT_command(CHECK_SIM_READY);
 	osDelay(100);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-		receive_response("Check SIM\n");
+//		receive_response("Check SIM\n");
 		osDelay(1000);
 		count_check_sim++;
 		if (count_check_sim >= 5){
@@ -412,7 +406,7 @@ int check_SIM_ready(){
 			return 0;
 		}
 	}
-	receive_response("Check SIM\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -423,7 +417,7 @@ int check_SIM_ready(){
 	//GET SIM CCID
 	send_AT_command(GET_SIM_CCID);
 	while(strstr((char *) response, "+QCCID:") == NULL){
-		receive_response("Check SIM CCID\n");
+//		receive_response();
 		osDelay(1000);
 		count_check_sim++;
 		if (count_check_sim >= TIME_LIMIT){
@@ -432,7 +426,7 @@ int check_SIM_ready(){
 			return 0;
 		}
 	}
-	receive_response("Check SIM CCID\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -447,7 +441,7 @@ int check_SIM_ready(){
 	while (first_pointer == NULL || second_pointer == NULL){
 		send_AT_command("AT+CREG?\r\n");
 		osDelay(150);
-		receive_response("Check Network Registration Status (CS Service)\n");
+//		receive_response("Check Network Registration Status (CS Service)\n");
 		osDelay(1000);
 		osDelay(300);
 		first_pointer = strstr((char*)response, CHECK_RESPONSE);
@@ -459,7 +453,9 @@ int check_SIM_ready(){
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
+		count_check_sim++;
 	}
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -470,11 +466,11 @@ int check_SIM_ready(){
 	send_AT_command(CONFIGURE_PS_SERVICE);
 	first_pointer = NULL;
 	second_pointer = NULL;
-	receive_response("Configuring Network Registration Status (PS Service)");
+//	receive_response("Configuring Network Registration Status (PS Service)");
 	while (first_pointer == NULL || second_pointer == NULL){
 		send_AT_command("AT+CGREG?\r\n");
 		osDelay(150);
-		receive_response("Check Network Registration Status (PS Service)\n");
+//		receive_response("Check Network Registration Status (PS Service)\n");
 		osDelay(1000);
 		osDelay(300);
 		first_pointer = strstr((char*)response, CHECK_RESPONSE);
@@ -486,9 +482,10 @@ int check_SIM_ready(){
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
+		count_check_sim++;
 	}
+	receive_response();
 	osDelay(100);
-	receive_response("Check Network Registration Status (PS Service)\n");
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 	count_check_sim = 0;
@@ -502,9 +499,11 @@ int check_SIM_ready(){
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
-		receive_response("Check Signal Quality Report\n");
+		count_check_sim++;
+		osDelay(1000);
+//		receive_response("Check Signal Quality Report\n");
 	}
-	receive_response("Check Signal Quality Report\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -517,7 +516,7 @@ int check_SIM_ready(){
 void check_configure_APN(){
 	send_AT_command(CHECK_CONFIGURE_APN);
 	osDelay(150);
-	receive_response("Check Configuring APN\n");
+	receive_response();
 }
 
 int configure_APN(int context_id){
@@ -525,7 +524,7 @@ int configure_APN(int context_id){
 	snprintf((char *)command, sizeof(command), "AT+QICSGP=%d,%d,\"%s\",\"%s\",\"%s\",%d,0\r\n", context_id, 1, APN_NAME, APN_USERNAME, APN_PASSWD, APN_AUTHEN);
 	send_AT_command((char*)command);
 	osDelay(150);
-	receive_response("CONFIGURE APN\n");
+	receive_response();
 	char *first_pointer = NULL;
 	char *second_pointer = NULL; 	
 	while (first_pointer == NULL || second_pointer == NULL){
@@ -562,7 +561,7 @@ int activate_context(int context_id){
 	snprintf((char *)command, sizeof(command), "AT+QIACT=%d\r\n", context_id);
 	send_AT_command((char*)command);
 	osDelay(150);
-	receive_response("Activate Context\r\n");
+	receive_response();
 	char *first_pointer = NULL;
 	char *second_pointer = NULL;
 	int count_check = 0;
@@ -595,7 +594,7 @@ int activate_context(int context_id){
 			break;
 		}
 
-		receive_response("Check Activate Context\r\n");
+		receive_response();
 		first_pointer = strstr((char*)response, CHECK_RESPONSE);
 		if(first_pointer != NULL){
 			second_pointer = strstr(first_pointer+1, CHECK_RESPONSE);
@@ -615,7 +614,7 @@ int deactivate_context(int context_id){
 	snprintf((char *)command, sizeof(command), "AT+QIDEACT=%d\r\n", context_id);
 	send_AT_command((char*)command);
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-		receive_response("DEACTIVATE CONTEXT\n");
+//		receive_response("DEACTIVATE CONTEXT\n");
 		if (strstr((char *) response, "ERROR") != NULL){
 			count_check = 0;
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
@@ -631,7 +630,7 @@ int deactivate_context(int context_id){
 		count_check++;
 		osDelay(1200);
 	}
-	receive_response("DEACTIVATE CONTEXT\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -650,11 +649,9 @@ int open_socket_service(int context_id, int connect_id, int local_port, int acce
 	char *first_pointer = NULL;
 	//time_t start = time(NULL);
 	int count_error = 0;
-	uart_transmit_string(&huart1, (uint8_t *) "Init start TIME\n");
 //	while(elapsed_time_ms < timeout_seconds){
 	while(first_pointer == NULL && elapsed_time_ms < timeout_seconds){
-		char output_elapsed[128];
-		receive_response("Check OPEN socket service: \r\n");
+//		receive_response();
 		if (strstr((char *) response, "ERROR") != NULL){
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
@@ -670,11 +667,10 @@ int open_socket_service(int context_id, int connect_id, int local_port, int acce
 		}
 		first_pointer = strstr((char*)response, "+QIOPEN:");
 		elapsed_time_ms++;
-		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", elapsed_time_ms);
-		uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
+		printf("Elapsed Time: %d\n", elapsed_time_ms);
 		osDelay(1000);
 	}
-	receive_response("Check OPEN socket service: \r\n");
+	receive_response();
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 	
@@ -684,7 +680,7 @@ int open_socket_service(int context_id, int connect_id, int local_port, int acce
 		snprintf((char *)command, sizeof(command), "AT+QISTATE=1,%d\r\n",connect_id);
 		send_AT_command((char*) command);
 		while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-			receive_response("Check SOCKET CONNECTION\n");
+//			receive_response("Check SOCKET CONNECTION\n");
 			if (strstr((char *) response, "ERROR") != NULL){
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
@@ -692,6 +688,7 @@ int open_socket_service(int context_id, int connect_id, int local_port, int acce
 			}
 			osDelay(1000);
 		}
+		receive_response();
 		osDelay(100);
 		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 		SIM_UART_ReInitializeRxDMA();
@@ -740,7 +737,7 @@ int check_socket_connection(int context_ID){
 		count_check++;
 		osDelay(1000);
 	}
-	receive_response("Check SOCKET CONNECTION\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -811,7 +808,7 @@ int login_to_server(int connect_id, const JT808_TerminalRegistration *reg_msg){
 	int count_check = 0;
 	int result = generateRegistrationMessage(reg_msg, hexString, 128);
 	if (result < 0) {
-		uart_transmit_string(&huart1,(uint8_t*) "ERROR: FAILED to generate message string\n");
+		printf("ERROR: FAILED to generate message string\n");
 		return 1;
 	}
 
@@ -821,32 +818,33 @@ int login_to_server(int connect_id, const JT808_TerminalRegistration *reg_msg){
 	send_AT_command((char*)command);
 
 //	while(1){
-	while(strstr((char *) response, CHECK_RESPONSE ) == NULL){
-		char output_elapsed[128];
+	while(strstr((char *) response, "+QIURC") == NULL){
 		//
 		if(count_check >= 50){
+			receive_response();
 			count_check = 0;
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
 		if (strstr((char*) response, "ERROR") != NULL){
+			receive_response();
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
 		if (strstr((char*)response, "closed") != NULL) {
+			receive_response();
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 2;
 		 }
 		count_check++;
-		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", count_check);
-		uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
-		receive_response("Check sending to server\n");
+		printf("Elapsed Time: %d\n", count_check);
+//		receive_response("Check sending to server\n");
 		osDelay(100);
 	}
-	receive_response("Check sending to server\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -861,22 +859,23 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 	int count_resend = 0;
 	int result = generateLocationInfoMessage(location_info, hexString, 131);
 	if (result < 0) {
-		uart_transmit_string(&huart1,(uint8_t*) "ERROR: FAILED to generate message string\n");
+		printf("ERROR: FAILED to generate message string\n");
 		return 1;
 	}
 
 		// Format the AT command with the hex message
 	snprintf((char *) command, sizeof(command), "AT+QISENDEX=%d,\"%s\"\r\n", connect_id, hexString);
 	send_AT_command((char*)command);
-	while(strstr((char *) response, "SEND OK") == NULL){
-		char output_elapsed[128];
+	while(strstr((char *) response, "+QIURC") == NULL){
 		osDelay(100);
 		if (strstr((char*)response, "closed") != NULL) {
+			 receive_response();
 			 memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			 SIM_UART_ReInitializeRxDMA();
 			 return 2;
 		}
 		if(count_check >= 50){
+			receive_response();
 			count_check = 0;
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
@@ -884,17 +883,17 @@ int send_location_to_server(int connect_id, const JT808_LocationInfoReport *loca
 		}
 
 		if (strstr((char*) response, "ERROR") != NULL){
+			receive_response();
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			count_resend++;
 			return 0;
 		}
 		count_check++;
-		snprintf(output_elapsed, 128, "Elapsed Time: %d\n", count_check);
-		uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
-		receive_response("Check sending to server\n");
+		printf("Elapsed Time: %d\n", count_check);
+		receive_response();
 	}
-	receive_response("Check sending to server\n");
+	receive_response();
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 	return 1;
@@ -906,49 +905,43 @@ int acknowledgeResponse(int connect_id){
 	int count_resend = 0;
 	int is_sent_ok = 0;
 
-
-	while(count_resend < 3){
+	while(count_resend <= 3){
 		is_sent_ok = 1;
 		snprintf((char *)command, sizeof(command), "AT+QISEND=%d,0\r\n", connect_id);
 		send_AT_command((char*)command);
-		Debug_printf("\n\n---------------- IN QISEND:0X0 SENDING COUNT: %d ------------------\n\n", count_resend);
+		printf("\n\n---------------- IN QISEND:0X0 SENDING COUNT: %d ------------------\n\n", count_resend);
 		while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-			char output_elapsed[128];
 			osDelay(100);
 			if(count_check >= 50){
 				count_check = 0;
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
-				send_AT_command((char*)command);
 				is_sent_ok = 0;
 				break;
 			}
 			if (strstr((char*) response, "ERROR") != NULL){
-				Debug_printf("\n\n---------------- IN QISEND: 0X0: ERROR ------------------\n\n");
+				printf("\n\n---------------- IN QISEND: 0X0: ERROR ------------------\n\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
-				send_AT_command((char*)command);
 				is_sent_ok = 0;
 				break;
 			}
 			is_sent_ok = 1;
 			count_check++;
 
-			snprintf(output_elapsed, 128, "Elapsed Time +QISEND: 0,0: %d\n", count_check);
-			uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
-			receive_response("Check sending to server\n");
+			printf("Elapsed Time +QISEND: 0,0: %d\n", count_check);
+			receive_response();
 		}
-
+		receive_response();
 		if(is_sent_ok == 0) {
 			count_resend++;
 			continue;
 		}
-		receive_response("Check sending to server\n");
+
 		int sentBytes, ackedBytes, unackedBytes;
 
 		int result = sscanf((char*)response, "AT+QISEND=0,0 +QISEND: %d,%d,%d", &sentBytes, &ackedBytes, &unackedBytes);
-		snprintf((char *)output, 128, "Lost Transmit BYTES: %d\n", unackedBytes);
-		uart_transmit_string(&huart1, output);
+		printf("Lost Transmit BYTES: %d\n", unackedBytes);
 		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 		SIM_UART_ReInitializeRxDMA();
 		if (result == 3) {
@@ -957,7 +950,7 @@ int acknowledgeResponse(int connect_id){
 				is_sent_ok = 0;
 			}
 			else{
-				Debug_printf("NO DATA LOSS\n");
+				printf("NO DATA LOSS\n");
 				break;
 			}
 		}
@@ -965,141 +958,83 @@ int acknowledgeResponse(int connect_id){
 	return is_sent_ok;
 }
 
-
-int check_data_sent_to_server(int connect_id){
+int getResponseFromServer(int connect_id){
 	uint8_t command[256];
 	int count_check = 0;
-	uint8_t output[128];
 	int count_resend = 0;
 	int is_sent_ok = 0;
-
-	Debug_printf("\n\n---------------- IN QIRD: 0X1500h ------------------\n\n");
-	while(count_resend < 5){
+	printf("\n\n---------------- IN QIRD: 0X1500h ------------------\n\n");
+	for(size_t i = 0; i < 5; i++){
 		snprintf((char *)command, sizeof(command), "AT+QIRD=%d,100\r\n", connect_id);
 		send_AT_command((char*)command);
-		Debug_printf("\n\n---------------- IN QIRD:0X100 SENDING COUNT: %d ------------------\n\n", count_resend);
+		printf("\n\n---------------- IN QIRD:0X100 SENDING COUNT: %d ------------------\n\n", count_resend);
 		is_sent_ok = 1;
 		while(strstr((char *) response, "+QIRD") == NULL){
-			char output_elapsed[128];
 			if (strstr((char*)response, "ERROR") != NULL){
-				Debug_printf("\n\n---------------- IN QIRD: 0X1500h: ERROR ------------------\n\n");
+				printf("\n\n---------------- IN QIRD: 0X1500h: ERROR ------------------\n\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
-				send_AT_command((char*)command);
 				is_sent_ok = 0;
 				break;
 			}
-			if(count_check >= 10){
+			if(count_check >= 50){
 				count_check = 0;
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
-				send_AT_command((char*)command);
 				is_sent_ok = 0;
 				break;
-
 			}
 			osDelay(100);
-			snprintf(output_elapsed, 128, "Elapsed Time +QISEND: 0,0: %d\n", count_check);
-			uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
+			printf( "Elapsed Time +QISEND: 0,0: %d\n", count_check);
 			count_check++;
-			receive_response("Check received data from server\n");
+			receive_response();
 		}
+
+		receive_response();
+
 		if(is_sent_ok == 0){
-			count_resend++;
 			count_check = 0;
 			osDelay(100);
 			continue;
 		}
-		receive_response("Check received data from server\n");
+
 		char *token = strstr((char*)response, "+QIRD: ");
 		int value = 0;
 
 		if (token != NULL) {
+			printf("TOKEN in QIRD is not NULL");
 			value = atoi(token + 7);  // Move past "+QIRD: " and convert to integer
 		}
-		snprintf((char*)output, 128, "\nNumber of character received: %d\n", value);
-		uart_transmit_string(&huart1, output);
+		printf("\nNumber of character received: %d\n", value);
 
-		uart_transmit_string(&huart1, (uint8_t*) "OUT OF receive data from server\n");
+		printf("OUT OF receive data from server\n");
 		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 		SIM_UART_ReInitializeRxDMA();
 		if(value == 0) {
-			count_resend++;
 			count_check = 0;
 			osDelay(100);
 		}
 		else break;
 	}
-//	osDelay(50);
-// --------------------------------------------------------------End of  QIRD ------------------------------------------------------------
-	if(is_sent_ok == 1){
-//		memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-//		SIM_UART_ReInitializeRxDMA();
-	//Reset value
-		count_check = 0;
-		count_resend = 0;
-		Debug_printf("\n\n---------------- IN QISEND: 0X0 ------------------\n\n");
+	return is_sent_ok;
+}
 
-		while(count_resend < 3){
-			is_sent_ok = 1;
-			snprintf((char *)command, sizeof(command), "AT+QISEND=%d,0\r\n", connect_id);
-			send_AT_command((char*)command);
-			Debug_printf("\n\n---------------- IN QISEND:0X0 SENDING COUNT: %d ------------------\n\n", count_resend);
-			while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-				char output_elapsed[128];
-				osDelay(100);
-				if(count_check >= 50){
-					count_check = 0;
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					send_AT_command((char*)command);
-					is_sent_ok = 0;
-					break;
-				}
-				if (strstr((char*) response, "ERROR") != NULL){
-					Debug_printf("\n\n---------------- IN QISEND: 0X0: ERROR ------------------\n\n");
-					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-					SIM_UART_ReInitializeRxDMA();
-					send_AT_command((char*)command);
-					is_sent_ok = 0;
-					break;
-				}
-				is_sent_ok = 1;
-				count_check++;
-
-				snprintf(output_elapsed, 128, "Elapsed Time +QISEND: 0,0: %d\n", count_check);
-				uart_transmit_string(&huart1, (uint8_t *)output_elapsed);
-				receive_response("Check sending to server\n");
-			}
-
-			if(is_sent_ok == 0) {
-				count_resend++;
-				continue;
-			}
-			receive_response("Check sending to server\n");
-			int sentBytes, ackedBytes, unackedBytes;
-
-			int result = sscanf((char*)response, "AT+QISEND=0,0 +QISEND: %d,%d,%d", &sentBytes, &ackedBytes, &unackedBytes);
-			snprintf((char *)output, 128, "Lost Transmit BYTES: %d\n", unackedBytes);
-			uart_transmit_string(&huart1, output);
-			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			SIM_UART_ReInitializeRxDMA();
-			if (result == 3) {
-				if (unackedBytes > 0) {
-					count_resend++;
-					is_sent_ok = 0;
-				}
-				else{
-					Debug_printf("NO DATA LOSS\n");
-					break;
-				}
-			}
+int check_data_sent_to_server(int connect_id){
+	if(acknowledgeResponse(0)){
+		printf("\n---------------------------- ACKNOWLEDGE SENDING SUCCESSFULLY -------------------------------\n");
+		if(getResponseFromServer(0)){
+			printf("\n------------------------------ GET RESPONSE from SERVER successfully -------------------------------\n");
+			return 1;
+		}
+		else{
+			printf("\n---------------------------- GET RESPONSE FROM SERVER FAILED -------------------------------\n");
+			return 0;
 		}
 	}
 	else{
-		Debug_printf("\n\n------------------QIRD ERROR SKIP QISEND0X0 ----------------------\n\n");
+		printf("\n---------------------------- ACKNOWLEDGE SENDING FAILED -------------------------------\n");
+		return 0;
 	}
-	return is_sent_ok;
 }
 
 
@@ -1109,7 +1044,7 @@ int close_connection(int connect_id){
 	send_AT_command((char*)command);
 	int count_check = 0;
 	while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-		receive_response("Check CLOSING to server\n");
+		receive_response();
 		if (strstr((char*)response, "ERROR") != NULL){
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
@@ -1118,6 +1053,7 @@ int close_connection(int connect_id){
 
 		if(count_check >= 5){
 			count_check = 0;
+			printf("Close Server failed");
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
@@ -1125,7 +1061,7 @@ int close_connection(int connect_id){
 		osDelay(1000);
 		count_check++;
 	}
-	receive_response("Check CLOSING to server\n");
+	receive_response();
 	osDelay(100);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -1135,7 +1071,6 @@ int close_connection(int connect_id){
 
 int extract_time_CCLK(uint8_t* message){
 	int year, month, day, hour, minute, second, timezone;
-	uint8_t output_buffer[128];
 
 	sscanf((char*) message, "AT+CCLK?\r\n+CCLK: \"%2d/%2d/%2d,%2d:%2d:%2d%2d\"",
 						&year, &month, &day, &hour, &minute, &second, &timezone);
@@ -1154,10 +1089,8 @@ int extract_time_CCLK(uint8_t* message){
 	rmc_jt.tim.sec = second;
 	set_time(hour, minute, second);
 	set_date(year, month, day);
-	snprintf((char*)output_buffer, 128, "Adjusted time to GMT+8: 20%02d/%02d/%02d, %02d:%02d:%02d\n", rmc_jt.date.Yr, rmc_jt.date.Mon, rmc_jt.date.Day, rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
-	uart_transmit_string(&huart1, (uint8_t*) "RTC Time: ");
-	uart_transmit_string(&huart1, (uint8_t*) "\n");
-	uart_transmit_string(&huart1, output_buffer);
+	printf("RTC TIME with GMT+8: 20%02d/%02d/%02d, %02d:%02d:%02d\n", rmc_jt.date.Yr, rmc_jt.date.Mon, rmc_jt.date.Day, rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
+
 	return 1;
 }
 
@@ -1172,11 +1105,11 @@ int getCurrentTime(){
 			SIM_UART_ReInitializeRxDMA();
 			return 0;
 		}
-		receive_response("Get time\n");
+		receive_response();
 		osDelay(100);
 		count_check++;
 	}
-	receive_response("Get time\n");
+	receive_response();
 	int result_extract = extract_time_CCLK(response);
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
@@ -1187,18 +1120,15 @@ int getCurrentTime(){
 
 
 void receiveRMCDataWithAddrGSM(){
-	uint8_t output_buffer[70];
-	uart_transmit_string(&huart1, (uint8_t*)"\\Inside Receiving Data at GSM\n\n");
+	printf("Inside Receiving Data at GSM\n\n");
 	osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 	if(status == osOK){
-		uart_transmit_string(&huart1, (uint8_t*)"\n\nReceived  ADDRESS Data at GSM: \n");
-		uart_transmit_string(&huart1, (uint8_t*)"Address received from MAIL QUEUE: \n");
+		printf("Address received from MAIL QUEUE: \n");
 		current_addr_gsm = receivedDataGSM.address;
 		if(checkAddrExistInQueue(current_addr_gsm, &result_addr_queue) == 0 || (current_addr_gsm >= end_addr_disconnect && current_addr_gsm <= (FLASH_END_ADDRESS - 0x100))){
 //			current_addr_gsm = receivedDataGSM->address;
-			Debug_printf("Saving data to variable to send to the server\n");
-			Uint32ToHex(current_addr_gsm, addr_out_gsm, 8);
-			Debug_printf("\n---------- Current data accepted at address: %s----------\n", addr_out_gsm);
+			printf("Saving data to variable to send to the server\n");
+			printf("\n---------- Current data accepted at address: %08lx----------\n", current_addr_gsm);
 			rmc_jt.lcation.latitude = receivedDataGSM.rmc.lcation.latitude;
 			rmc_jt.lcation.longitude = receivedDataGSM.rmc.lcation.longitude;
 			rmc_jt.speed = receivedDataGSM.rmc.speed;
@@ -1213,30 +1143,19 @@ void receiveRMCDataWithAddrGSM(){
 			rmc_jt.tim.min = receivedDataGSM.rmc.tim.min;
 			rmc_jt.tim.sec = receivedDataGSM.rmc.tim.sec;
 
-			snprintf((char *)output_buffer, sizeof(output_buffer), "Time SENDING TO SERVER at GSM: %d:%d:%d\n", rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec);
-			uart_transmit_string(&huart1, output_buffer);
-
-			snprintf((char *)output_buffer, sizeof(output_buffer), "Date SENDING TO SERVER at GSM: %d/%d/%d\n", rmc_jt.date.Day, rmc_jt.date.Mon, rmc_jt.date.Yr);
-			uart_transmit_string(&huart1, output_buffer);
-
-			snprintf((char *)output_buffer, sizeof(output_buffer), "Location SENDING TO SERVER at GSM: %.6f %c, %.6f %c\n", rmc_jt.lcation.latitude, rmc_jt.lcation.NS, rmc_jt.lcation.longitude, receivedDataGSM.rmc.lcation.EW);
-			uart_transmit_string(&huart1, output_buffer);
-
-			snprintf((char *)output_buffer, sizeof(output_buffer),"Speed SENDING TO SERVER at GSM: %.2f, Course: %.2f, Valid: %d\n", rmc_jt.speed, rmc_jt.course, rmc_jt.isValid);
-			uart_transmit_string(&huart1, output_buffer);
+			printf("\n@@@ GSM-> time: %d:%d:%d --------- date: %d/%d/%d  --------- current_addr: %08lx @@@\n", rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec, rmc_jt.date.Day, rmc_jt.date.Mon, rmc_jt.date.Yr, current_addr_gsm);
 
 			received_RMC = 1;
 			count_send_gsm++;
 		}
 		else{
-			Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
-			Debug_printf("\n----------------Have sent data in this address successfully already: %s ----------------\n", addr_out_gsm);
+			printf("\n----------------Have sent data in this address successfully already: %08lx ----------------\n", receivedDataGSM.address);
 		}
 	}
 	else{
-		Debug_printf("There is no address mail left\n");
+		printf("There is no address mail left\n");
 		if(is_disconnect == 0 && is_using_flash == 1 && is_keep_up == 0) {
-			Debug_printf("----------------------KEEP UP WITH THE MOST CURRENT DATA ---------------------------");
+			printf("----------------------KEEP UP WITH THE MOST CURRENT DATA ---------------------------");
 			is_keep_up = 1;
 		}
 	}
@@ -1246,68 +1165,66 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 	int count_resend = 0;
 	int count_check = 0;
 	int result_send_location = 1;
+	int result_check = 0;
 	while(count_resend < 3){
 		uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
-		Debug_printf("\n\n --------------Thread GSM %p is running low on stack: %04d bytes remaining----------\n\n",GSMHandle, freeStack1);
-		Debug_printf(" \n\n--------------------------- GOING TO SEND DATA TO SERVER: RESEND COUNT %d -----------------------\n\n", count_resend);
+		printf("\n\n --------------Thread GSM %p is running low on stack: %04ld bytes remaining----------\n\n",GSMHandle, freeStack1);
+		printf(" \n\n--------------------------- GOING TO SEND DATA TO SERVER: RESEND COUNT %d -----------------------\n\n", count_resend);
 		result_send_location = send_location_to_server(0, location_info);
 
 		if(result_send_location == 1){
-			uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Sending Location Report\r\n");
-			int result_check = check_data_sent_to_server(0);
+			printf("Inside process: Check Sending Location Report\r\n");
+			result_check = check_data_sent_to_server(0);
 			if(result_check){
-				uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
-				Debug_printf("\n\n--------------------------------- COUNT SEND GSM: %d -------------------------------------------\n\n", count_send_gsm);
+				printf("Sending SUCCESS\n");
+				printf("\n\n--------------------------------- COUNT SEND GSM: %d -------------------------------------------\n\n", count_send_gsm);
 //				receive_response("Check location report\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
 				return 1;
 			}
 			else{
-				uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR (CHECKING SENDING RESULT ERROR)\n");
+				printf("Sending ERROR (CHECKING SENDING RESULT ERROR)\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
 				count_resend++;
 			}
 		}
 		else if(result_send_location == 2){
-			receive_response("Check location report\n");
-			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			SIM_UART_ReInitializeRxDMA();
-			Debug_printf("The connection to server is closed. \n");
+			printf("The connection to server is closed. \n");
 			count_resend++;
-			return 2;
 		}
 		else{
-			uart_transmit_string(&huart1, (uint8_t *)"\n\n---------------------  Sending ERROR (SENDING ERROR)  -------------------\n\n");
+			printf("\n\n---------------------  Sending ERROR (SENDING ERROR)  -------------------\n\n");
 //			receive_response("Check location report\n");
-			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-			SIM_UART_ReInitializeRxDMA();
 			count_resend++;
 		}
 		osDelay(200);
 	}
 	send_AT_command(FIRST_CHECK);
 	while(strstr((char *) response, CHECK_RESPONSE) != NULL){
-		receive_response("First check SIM MODULE\n");
+		receive_response();
 		if(count_check > 10){
-			Debug_printf("SIM MODULE BUG");
+			printf("SIM MODULE BUG");
 			memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 			return 2;
 		}
 		count_check++;
 		osDelay(100);
 	}
-	receive_response("First check SIM MODULE\n");
+	receive_response();
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
-	return 0;
+
+	if(result_send_location == 0 || result_check == 0) return 0;
+	else if(result_send_location  == 2) return 2;
+	else return 0;
 }
 
 void StartGSM(void const * argument)
 {
   /* USER CODE BEGIN StartGSM */
-	Debug_printf("------------------------ Starting GSM: Pushing data to Server ------------------------");
+	printf("------------------------ Starting GSM: Pushing data to Server ------------------------");
 	RingBufferDmaU8_initUSARTRx(&SIMRxDMARing, &huart3, response, SIM_RESPONSE_MAX_SIZE);
 	
 	JT808_TerminalRegistration reg_msg = create_terminal_registration();
@@ -1332,25 +1249,25 @@ void StartGSM(void const * argument)
 //	char output_elapsed[128];
 	for(;;)
 	{
-//		Debug_printf("\n\n\n--------------------- INSIDE GSM -----------------------\n\n\n");
+//		printf("\n\n\n--------------------- INSIDE GSM -----------------------\n\n\n");
 		osDelay(300);
 		switch(process){
 			//Wait for SIM module to start
 			case 0:
 				countReconnect = 0;
-				uart_transmit_string(&huart1, (uint8_t *)"First CHECK\r\n");
+				printf("First CHECK\r\n");
 				isReady = first_check_SIM();
 				if(isReady) process++;
 				else{
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+					printf("\n------------------------ Rebooting SIM module -------------------\n");
 					reboot_SIM_module();
 				}
 				break;
 			case 1:
 				// Check status of SIM. Wait until SIM is ready
-				uart_transmit_string(&huart1, (uint8_t *)"Check EVERYTHING READY\r\n");
+				printf("Check EVERYTHING READY\r\n");
 				osDelay(100);
 				int check_SIM = check_SIM_ready();
 				if(is_set_uniqueID == 0 && check_SIM == 1){
@@ -1363,7 +1280,7 @@ void StartGSM(void const * argument)
 				if (check_SIM == 0){
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module");
+					printf("\n --------------------------- Rebooting SIM module --------------------------\n");
 					reboot_SIM_module();
 					process = 0;
 				}
@@ -1371,7 +1288,7 @@ void StartGSM(void const * argument)
 				break;
 			case 2:
 				// Configure the PDP context
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Configure PDP context\r\n");
+				printf("Inside process: Configure PDP context\r\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
 				configure_APN(1);
@@ -1381,18 +1298,18 @@ void StartGSM(void const * argument)
 				break;
 			case 3:
 				//Activate the PDP context.
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Activate PDP context\r\n");
+				printf("Inside process: Activate PDP context\r\n");
 				int receive_activate = activate_context(1);
 				if(receive_activate){
 					getCurrentTime();
-					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP context successfully\n");
+					printf("Activate PDP context successfully\n");
 					osDelay(200);
 					process++;
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
 				}
 				else{
-					uart_transmit_string(&huart1, (uint8_t*) "Activate PDP Context Failed\n");
+					printf("Activate PDP Context Failed\n");
 					int receive_deactivate = deactivate_context(1);
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
@@ -1400,7 +1317,7 @@ void StartGSM(void const * argument)
 					else {
 						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 						SIM_UART_ReInitializeRxDMA();
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+						printf("\n --------------------------- Rebooting SIM module ---------------------------\n");
 						reboot_SIM_module();
 						process = 0;
 					}
@@ -1408,10 +1325,10 @@ void StartGSM(void const * argument)
 				break;
 			case 4:
 				//Open socket service
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: OPEN SOCKET SERVICE\r\n");
+				printf("Inside process: OPEN SOCKET SERVICE\r\n");
 				int received_res = open_socket_service(1, 0, 0, 0);
 				if(received_res){
-//					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server successfully\n");
+//					printf(&huart1, (uint8_t*) "Connect to Server successfully\n");
 //					//int result_check_connect = check_socket_connection(1);
 //					if(result_check_connect == 1){
 //						countReconnect++;
@@ -1420,14 +1337,14 @@ void StartGSM(void const * argument)
 //					else{
 //						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 //						SIM_UART_ReInitializeRxDMA();
-//						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+//						printf(&huart1,(uint8_t*) "Rebooting SIM module\n");
 //						reboot_SIM_module();
 //						process = 0;
 //					}
 				}
 				else
 				{
-					uart_transmit_string(&huart1, (uint8_t*) "Connect to Server Failed\n");
+					printf("Connect to Server Failed\n");
 					int receive_deactivate = deactivate_context(1);
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
@@ -1435,7 +1352,7 @@ void StartGSM(void const * argument)
 					else{
 						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 						SIM_UART_ReInitializeRxDMA();
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+						printf("\n ------------------------- Rebooting SIM module -----------------------\n");
 						reboot_SIM_module();
 						process = 0;
 					}
@@ -1444,12 +1361,12 @@ void StartGSM(void const * argument)
 			case 5:
 				// REGISTER/LOGIN TO THE SERVER
 				int count_resend_login = 0;
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Register/Login to the server.\r\n");
+				printf("Inside process: Register/Login to the server.\r\n");
 				while(count_resend_login < 3){
 					int result_send_login = login_to_server(0,&reg_msg);
-					receive_response("Check terminal register\n");
+					receive_response();
 					if(result_send_login){
-						Debug_printf("LOGIN TO SERVER SUCCESSFULLY\n");
+						printf("LOGIN TO SERVER SUCCESSFULLY\n");
 						break;
 					}
 					else{
@@ -1463,11 +1380,11 @@ void StartGSM(void const * argument)
 			case 6:
 				//CHECK LOGIN TO SERVER
 
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Check Register/Login\r\n");
+				printf("Inside process: Check Register/Login\r\n");
 
 				int result_check_login = check_data_sent_to_server(0);
 				if(result_check_login){
-					receive_response("Check terminal register\n");
+					receive_response();
 					process++;
 				}
 				else process = 8;
@@ -1475,7 +1392,7 @@ void StartGSM(void const * argument)
 			case 7:
 				is_in_sending = 1;
 				//Send Location
-				uart_transmit_string(&huart1, (uint8_t *)"Inside process: Send Location\r\n");
+				printf("Inside process: Send Location\r\n");
 				int result_get_current = getCurrentTime();
 				if(result_get_current == 0){
 					process++;
@@ -1486,28 +1403,29 @@ void StartGSM(void const * argument)
 //					received_RMC = 1;
 					if(received_RMC == 1){
 						received_RMC = 0;
-						uart_transmit_string(&huart1, (uint8_t *)"RECEIVED RMC DATA AT GSM MODULE\n");
+						printf("RECEIVED RMC DATA AT GSM MODULE\n");
 						save_rmc_to_location_info(&location_info);
-						Debug_printf("Current stack address to be sent to the server: \n");
-						Uint32ToHex(current_addr_gsm, addr_out_gsm, 8);
-						Debug_printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %s\n", addr_out_gsm);
+						printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %08lx\n", current_addr_gsm);
 
 
 						//CHECK SIGNAL QUALITY
-						send_AT_command(CHECK_SIGNAL_QUALITY);
-						while(strstr((char *) response, CHECK_RESPONSE) == NULL){
-							if (count_check_csq >= 5){
-								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-								SIM_UART_ReInitializeRxDMA();
+						for(size_t i = 0; i < 3 ; i++){
+							send_AT_command(CHECK_SIGNAL_QUALITY);
+							osDelay(300);
+							if(strstr((char *) response, CHECK_RESPONSE) == NULL){
+								printf("\n CSQ OK:");
+								receive_response();
+								printf("\n");
 								break;
 							}
-							receive_response("Check Signal Quality Report\n");
+							else{
+								printf("\n CSQ NOT OK -> RESEND:");
+								receive_response();
+								printf("\n");
+							}
+							memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
+							SIM_UART_ReInitializeRxDMA();
 						}
-						receive_response("Check Signal Quality Report\n");
-						osDelay(100);
-						memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
-						SIM_UART_ReInitializeRxDMA();
-						count_check_csq = 0;
 
 						HAL_TIM_Base_Start(&htim3);
 						__HAL_TIM_SET_COUNTER(&htim3, 0);
@@ -1515,8 +1433,8 @@ void StartGSM(void const * argument)
 							result_final = processUploadDataToServer(&location_info);
 							if(result_final == 1){
 								countReconnect = 0;
-								uart_transmit_string(&huart1, (uint8_t *)"Sending SUCCESS\n");
-								receive_response("Check location report\n");
+								printf("Sending SUCCESS\n");
+								receive_response();
 								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 								SIM_UART_ReInitializeRxDMA();
 
@@ -1524,11 +1442,11 @@ void StartGSM(void const * argument)
 									if(is_disconnect == 1){
 										end_addr_disconnect = current_addr_gsm;
 										in_getting_mail_stack = 1;
-										Debug_printf("End address of network outage. RECONNECTED SUCCESSFULLY: %08x\n", end_addr_disconnect);
+										printf("End address of network outage. RECONNECTED SUCCESSFULLY: %08lx\n", end_addr_disconnect);
 									}
 
 
-									Debug_printf("\n-----------ADDING current address to the result queue----------\n");
+									printf("\n-----------ADDING current address to the result queue----------\n");
 									enqueue_GSM(&result_addr_queue, current_addr_gsm);
 									if(is_keep_up == 0) num_in_mail_sent++;
 
@@ -1552,37 +1470,36 @@ void StartGSM(void const * argument)
 										start_addr_disconnect -= count_shiftleft * 128;
 										count_shiftleft = 0;
 										in_getting_mail_stack = 0;
-										Debug_printf("\n\n-------------- HAVE SENT ALL THE STACKED DATA IN MAIL QUEUE ----------------\n\n");
+										printf("\n\n-------------- HAVE SENT ALL THE STACKED DATA IN MAIL QUEUE ----------------\n\n");
 									}
 
-									Debug_printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
+									printf("\n--------------RESULT ADDRESS QUEUE----------------\n");
 									printQueue_GSM(&result_addr_queue);
 
 									if(start_addr_disconnect >= end_addr_disconnect - 128 && checkAddrExistInQueue(end_addr_disconnect - 128, &result_addr_queue)){
-										Debug_printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
+										printf("\n\n\n\n---------------END GETTING FROM FLASH-------------\n\n\n\n");
 										is_using_flash = 0;
 										clearQueue_GSM(&result_addr_queue);
 										start_addr_disconnect = 0;
 										end_addr_disconnect = 0;
 										count_shiftleft = 0;
 										is_keep_up = 0;
-										Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+										printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 										while(1){
-											Debug_printf("Receiving MAIL\n");
+											printf("Receiving MAIL\n");
 											osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 											if(status == osOK){
-												Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
-												Debug_printf("Receiving MAIL For CLEARING: %s\n", addr_out_gsm);
+												printf("Receiving MAIL For CLEARING: %08lx\n", receivedDataGSM.address);
 												// After processing, free the mail to clear it
 											}
 											else{
-												Debug_printf("Have cleared out all mail queue\n");
+												printf("Have cleared out all mail queue\n");
 												break;
 											}
 										}
 									}
 									else{
-										Debug_printf("\n\n------------------ USING FLASH TO PUSH TO SERVER -----------------\n\n");
+										printf("\n\n------------------ USING FLASH TO PUSH TO SERVER -----------------\n\n");
 										is_using_flash = 1;
 									}
 									is_disconnect = 0;
@@ -1590,13 +1507,13 @@ void StartGSM(void const * argument)
 								is_pushing_data = 0;
 							}
 							else {
-								uart_transmit_string(&huart1, (uint8_t *)"Sending ERROR\n");
+								printf("Sending ERROR\n");
 								memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 								SIM_UART_ReInitializeRxDMA();
 								if(is_disconnect == 0){
 									if(is_using_flash == 0){
 										start_addr_disconnect = current_addr_gsm;
-										Debug_printf("Saving start address of connection outage: %08x\n", start_addr_disconnect);
+										printf("Saving start address of connection outage: %08lx\n", start_addr_disconnect);
 									}
 									is_disconnect = 1;
 	//								is_using_flash = 0;
@@ -1605,17 +1522,16 @@ void StartGSM(void const * argument)
 								//Reconnect then disconnect case: "HAVE NOT COMPLETE Get and send all the data from the last disconnect phase"
 								if(is_using_flash == 1){
 									if(is_keep_up){
-										Debug_printf("\n-----------------BEFORE update the result address data: GSM --------------\n");
+										printf("\n-----------------BEFORE update the result address data: GSM --------------\n");
 										printQueue_GSM(&result_addr_queue);
-										Debug_printf("\n--------------- Update the result address data: GSM --------------\n");
+										printf("\n--------------- Update the result address data: GSM --------------\n");
 
 
 										//Delete all the address that has been getting from FLASH.
 										for (int i = 0; i < result_addr_queue.size; i++) {
 											int idx = (result_addr_queue.front + i) % MAX_SIZE;
 											if(result_addr_queue.data[idx] < start_addr_disconnect){
-												Uint32ToHex(result_addr_queue.data[idx], addr_out_gsm, 8);
-												Debug_printf("CURRENT INDEX TO CHECK DELETING: %s", addr_out_gsm);
+												printf("CURRENT INDEX TO CHECK DELETING: %08lx", result_addr_queue.data[idx]);
 		//										result_addr_queue.data[idx] -= 128 * count_shiftleft;
 												deleteMiddle_GSM(&result_addr_queue, idx);
 												i--;
@@ -1663,13 +1579,13 @@ void StartGSM(void const * argument)
 									//Clear osMail
 
 
-									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+									printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 									while(1){
-										Debug_printf("Receiving MAIL\n");
+										printf("Receiving MAIL\n");
 										osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 										if(status == osOK){
-											Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
-											Debug_printf("Receiving MAIL: %s\n", addr_out_gsm);
+
+											printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
 											if(is_keep_up == 0 && receivedDataGSM.address == 0x4F00){
 												for (int i = 0; i < num_in_mail_sent; i++) {
 													int idx = (result_addr_queue.rear - i + MAX_SIZE) % MAX_SIZE; // Calculate the index in reverse
@@ -1679,7 +1595,7 @@ void StartGSM(void const * argument)
 											// After processing, free the mail to clear it
 										}
 										else{
-											Debug_printf("Have cleared out all mail queue\n");
+											printf("Have cleared out all mail queue\n");
 											break;
 										}
 									}
@@ -1687,21 +1603,21 @@ void StartGSM(void const * argument)
 								}
 								else{
 									// TODO: THe duration of checking data sent is 20s. WHAT IF IN THAT DURATION THE ACTUAL ADDRESS HAS BEEN SHIFT LEFT
-									Debug_printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
+									printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 									int count_mail_end_addr = 0;
 									while(1){
-										Debug_printf("Receiving MAIL\n");
+										printf("Receiving MAIL\n");
 										osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
 										if(status == osOK){
-											Uint32ToHex(receivedDataGSM.address, addr_out_gsm, 8);
-											Debug_printf("Receiving MAIL: %s\n", addr_out_gsm);
+
+											printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
 											if(receivedDataGSM.address == (FLASH_END_ADDRESS - 0X100)){
 												count_mail_end_addr++;
 											}
 											// After processing, free the mail to clear it
 										}
 										else{
-											Debug_printf("Have cleared out all mail queue\n");
+											printf("Have cleared out all mail queue\n");
 											break;
 										}
 									}
@@ -1718,53 +1634,53 @@ void StartGSM(void const * argument)
 								is_pushing_data = 0;
 
 								if(result_final == 2){
-									Debug_printf("---------------------SIM ERROR ----------------------\n");
+									printf("---------------------SIM ERROR ----------------------\n");
 									memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 									SIM_UART_ReInitializeRxDMA();
-									uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+									printf("Rebooting SIM module\n");
 									reboot_SIM_module();
 									process = 0;
 									break;
 								} else{
-									Debug_printf("\n--------------------SENDING ERROR -----------------------\n");
+									printf("\n--------------------SENDING ERROR -----------------------\n");
 									process++;
 									break;
 								}
 							}
 							int period = __HAL_TIM_GET_COUNTER(&htim3);
-							Debug_printf("\n--------------------Sending to SERVER takes %d -----------------------\n\n",period);
-							Debug_printf("\n--------------------END OF SENDING SERVER --------------------------\n\n");
+							printf("\n--------------------Sending to SERVER takes %d -----------------------\n\n",period);
+							printf("\n--------------------END OF SENDING SERVER --------------------------\n\n");
 							osDelay(200);
 //							osMutexRelease(myMutex);
 //						}
 					}
 				}
-				Debug_printf("\n--------------------END OF CASE 7 --------------------------\n\n");
+				printf("\n--------------------END OF CASE 7 --------------------------\n\n");
 				break;
 
 			case 8:
 				//Close CONNECTION
 				uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
 
-				Debug_printf("\n\n --------------Thread GSM %p is running low on stack: %04d bytes remaining----------\n\n",GSMHandle, freeStack1);
+				printf("\n\n --------------Thread GSM %p is running low on stack: %04ld bytes remaining----------\n\n",GSMHandle, freeStack1);
 				int result_close = close_connection(0);
 				if(result_close){
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
 					if(countReconnect > 20){
-						uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+						printf("Rebooting SIM module\n");
 						reboot_SIM_module();
 						process = 0;
 					}
 					else{
-						uart_transmit_string(&huart1,(uint8_t*) "REOPEN CONNECTION TO SERVER\n");
+						printf("REOPEN CONNECTION TO SERVER\n");
 						process = 4;
 					}
 				}
 				else{
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 					SIM_UART_ReInitializeRxDMA();
-					uart_transmit_string(&huart1,(uint8_t*) "Rebooting SIM module\n");
+					printf("\n ------------------------------ Rebooting SIM module -------------------------\n");
 					reboot_SIM_module();
 					process = 0;
 				}

@@ -31,7 +31,7 @@ int isFull_GSM(Queue_GSM* q) {
 // Function to enqueue (add) a uint32_t value to the Queue_GSM
 void enqueue_GSM(Queue_GSM* q, uint32_t value) {
     if (isFull_GSM(q)) {
-        Debug_printf("Queue_GSM is full\n");
+        printf("Queue_GSM is full\n");
         return;
     }
     q->rear = (q->rear + 1) % MAX_SIZE; // Circular increment
@@ -42,7 +42,7 @@ void enqueue_GSM(Queue_GSM* q, uint32_t value) {
 // Function to dequeue (remove) a uint32_t value from the Queue_GSM
 uint32_t dequeue_GSM(Queue_GSM* q) {
     if (isEmpty_GSM(q)) {
-        Debug_printf("Queue_GSM is empty\n");
+        printf("Queue_GSM is empty\n");
         return 0; // Return a default value if the Queue_GSM is empty
     }
     uint32_t value = q->data[q->front];
@@ -54,7 +54,7 @@ uint32_t dequeue_GSM(Queue_GSM* q) {
 // Function to peek (get) the front value without removing it
 uint32_t peek_GSM(Queue_GSM* q) {
     if (isEmpty_GSM(q)) {
-        Debug_printf("Queue_GSM is empty\n");
+        printf("Queue_GSM is empty\n");
         return 0; // Return a default value if the Queue_GSM is empty
     }
     return q->data[q->front];
@@ -73,15 +73,15 @@ void clearQueue_GSM(Queue_GSM* q) {
 // Function to print the Queue_GSM contents (for debugging)
 int printQueue_GSM(Queue_GSM* q) {
     if (isEmpty_GSM(q)) {
-        Debug_printf("Queue_GSM is empty\n");
+        printf("Queue_GSM is empty\n");
         return 0;
     }
-    Debug_printf("Queue_GSM contents: \n");
+    printf("Queue_GSM contents: \n");
     for (int i = 0; i < q->size; i++) {
         int idx = (q->front + i) % MAX_SIZE;
-        Debug_printf("Index %d: %08x\n", i, q->data[idx]);
+        printf("Index %d: %08lx\n", i, q->data[idx]);
     }
-    Debug_printf("\n");
+    printf("\n");
     return q->size;
 }
 
@@ -90,25 +90,25 @@ int checkAddrExistInQueue(uint32_t addr, Queue_GSM* q) {
     for (int i = 0; i < q->size; i++) {
         int idx = (q->front + i) % MAX_SIZE;
         if (q->data[idx] == addr) {
-            Debug_printf("FOUND ADDRESS: %08lx\n", addr);
+            printf("FOUND ADDRESS: %08lx\n", addr);
             return 1;
         }
 //        if(addr > q->data[idx] && addr < end_addr){
-//        	Debug_printf("INVALID ADDRESS: %08lx\n", addr);
+//        	printf("INVALID ADDRESS: %08lx\n", addr);
 //        }
     }
-    Debug_printf("NOT FOUND ADDRESS: %08lx\n", addr);
+    printf("NOT FOUND ADDRESS: %08lx\n", addr);
     return 0;
 }
 
 // Function to delete a parameter in the middle of the Queue_GSM
 void deleteMiddle_GSM(Queue_GSM* q, int indexToDelete) {
     if (isEmpty_GSM(q)) {
-        Debug_printf("Queue_GSM is empty. Nothing to delete.\n");
+        printf("Queue_GSM is empty. Nothing to delete.\n");
         return;
     }
     if (indexToDelete < 0 || indexToDelete >= q->size) {
-        Debug_printf("Invalid index. Cannot delete.\n");
+        printf("Invalid index. Cannot delete.\n");
         return;
     }
 
@@ -123,6 +123,6 @@ void deleteMiddle_GSM(Queue_GSM* q, int indexToDelete) {
     // Update rear and size
     q->rear = (q->rear - 1 + MAX_SIZE) % MAX_SIZE;
     q->size--;
-    Debug_printf("Element at index %d deleted successfully.\n", indexToDelete);
+    printf("Element at index %d deleted successfully.\n", indexToDelete);
 }
 
