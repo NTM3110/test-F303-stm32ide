@@ -82,6 +82,15 @@ typedef struct RMCSTRUCT{
 	LOCATION lcation;
 }RMCSTRUCT;
 
+typedef struct {
+    double x;  // State (e.g., latitude)
+    double p;  // Estimated uncertainty
+    double q;  // Process noise covariance
+    double r;  // Measurement noise covariance
+    double k;  // Kalman gain
+} KalmanFilter;
+
+
 
 typedef struct GSM_MAIL_STRUCT{
 	RMCSTRUCT rmc;
@@ -89,7 +98,6 @@ typedef struct GSM_MAIL_STRUCT{
 }GSM_MAIL_STRUCT;
 
 extern uint32_t result_address;
-extern int is_flash_overflow;
 extern volatile uint32_t start_addr_disconnect;
 extern volatile uint32_t current_addr_gsm;
 extern volatile uint32_t end_addr_disconnect;
@@ -108,8 +116,7 @@ extern osThreadId_t SpiFlashHandle;
 #define PAGE_SIZE           0x80
 
 
-
-extern int mode;
+extern RMCSTRUCT rmc_saved;
 
 extern uint8_t count_shiftleft;
 
@@ -133,6 +140,8 @@ int W25_ReadData(uint32_t address, uint8_t *buf, int bufSize);
 int checkSentToServer(uint32_t addr, Queue_GSM *queue);
 
 void receiveRMCData(void);
+
+RMCSTRUCT readFlash(uint32_t addr);
 
 
 #endif

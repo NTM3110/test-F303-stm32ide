@@ -1,2 +1,2 @@
-../Core/Src/system_management.c:6:6:uart_transmit_string	1
-../Core/Src/system_management.c:11:6:Debug_printf	1
+../Core/Src/system_management.c:12:6:Uint32ToHex	3
+../Core/Src/system_management.c:19:6:Delay_ms	3

@@ -44,9 +44,6 @@ void set_date (uint8_t year, uint8_t month, uint8_t date)  // monday = 1
 
 void get_RTC_time_date(RMCSTRUCT *rmc)
 {
-	uint8_t output_buffer[128];
-	char time[10];  // "HH:MM:SS" format, 8 characters + null terminator
-	char date[12]; // "YYYY-MM-DD" format, 10 characters + null terminator
 	RTC_DateTypeDef gDate;
 	RTC_TimeTypeDef gTime;
 
@@ -57,12 +54,10 @@ void get_RTC_time_date(RMCSTRUCT *rmc)
 
   /* Display time Format: hh:mm:ss */
   /* Format time as "HH:MM:SS" */
-	snprintf(time, sizeof(time), "%02d:%02d:%02d\n", gTime.Hours, gTime.Minutes, gTime.Seconds);
-	uart_transmit_string(&huart1,(uint8_t*) time);
+	printf("%02d:%02d:%02d\n", gTime.Hours, gTime.Minutes, gTime.Seconds);
 
 	/* Format date as "YYYY-MM-DD" */
-	snprintf(date, sizeof(date), "20%02d-%02d-%02d\n", gDate.Year, gDate.Month, gDate.Date);
-	uart_transmit_string(&huart1,(uint8_t*) date);
+	printf("20%02d-%02d-%02d\n", gDate.Year, gDate.Month, gDate.Date);
 
 	rmc->date.Yr = gDate.Year;
 	rmc->date.Mon = gDate.Month;
@@ -72,6 +67,6 @@ void get_RTC_time_date(RMCSTRUCT *rmc)
 	rmc->tim.sec = gTime.Seconds;
 
 	//save_rmc_to_location_info(location_info);
-	snprintf((char*)output_buffer, 128, "Time to GMT+8 saved to RMC: 20%02d/%02d/%02d, %02d:%02d:%02d\n", rmc->date.Yr, rmc->date.Mon, rmc->date.Day, rmc->tim.hour, rmc->tim.min, rmc->tim.sec);
-	uart_transmit_string(&huart1, (uint8_t*) output_buffer);
+//	snprintf((char*)output_buffer, 128, "Time to GMT+8 saved to RMC: 20%02d/%02d/%02d, %02d:%02d:%02d\n", rmc->date.Yr, rmc->date.Mon, rmc->date.Day, rmc->tim.hour, rmc->tim.min, rmc->tim.sec);
+//	uart_transmit_string(&huart1, (uint8_t*) output_buffer);
 }

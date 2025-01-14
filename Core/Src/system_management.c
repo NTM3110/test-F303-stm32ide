@@ -3,24 +3,23 @@
 #include <stdarg.h>
 #include <string.h>
 
-void uart_transmit_string(UART_HandleTypeDef *huart, uint8_t *string) {
-    HAL_UART_Transmit(huart, string, strlen((char *)string), 1000);
+#include "spi_flash.h"
+
+uint32_t current_addr_debug = DEBUG_START_ADDRESS;
+uint8_t output_debug_buffer[512] = {0};
+
+
+void Uint32ToHex(uint32_t value, char *output, uint8_t width) {
+    for (int i = 0; i < width; i++) {
+        uint8_t nibble = (value >> (4 * (width - 1 - i))) & 0xF; // Extract each nibble
+        output[i] = (nibble < 10) ? ('0' + nibble) : ('A' + nibble - 10); // Convert to hex char
+    }
+    output[width] = '\0'; // Null-terminate
 }
-
-
-void Debug_printf(const char *format, ...) {
-    char output_buffer[256]; // Adjust size as needed
-    va_list args;
-
-    // Start processing the variadic arguments
-    va_start(args, format);
-
-    // Format the string
-    vsnprintf(output_buffer, sizeof(output_buffer), format, args);
-
-    // End processing the arguments
-    va_end(args);
-
-    // Transmit the formatted string over UART
-    uart_transmit_string(&huart1,(uint8_t*) output_buffer);
+void Delay_ms(uint32_t duration_ms) {
+    for (uint32_t i = 0; i < duration_ms; i++) {
+        for (volatile uint32_t j = 0; j < 666; j++) {
+            // Inner loop to create 1 ms delay
+        }
+    }
 }
