@@ -36,6 +36,6 @@
 ../Core/Src/GSM.c:1041:5:close_connection	280	static
 ../Core/Src/GSM.c:1072:5:extract_time_CCLK	64	static
 ../Core/Src/GSM.c:1098:5:getCurrentTime	16	static
-../Core/Src/GSM.c:1122:6:receiveRMCDataWithAddrGSM	40	static
-../Core/Src/GSM.c:1164:5:processUploadDataToServer	32	static
-../Core/Src/GSM.c:1224:6:StartGSM	168	static
+../Core/Src/GSM.c:1122:6:receiveRMCDataWithAddrGSM	56	static
+../Core/Src/GSM.c:1165:5:processUploadDataToServer	32	static
+../Core/Src/GSM.c:1225:6:StartGSM	192	static

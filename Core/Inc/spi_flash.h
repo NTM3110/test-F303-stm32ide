@@ -107,8 +107,8 @@ extern int is_pushing_data;
 extern int is_keep_up;
 extern Queue_GSM result_addr_queue;
 extern Queue_GSM mail_sent_queue;
-extern osMutexId_t myMutex;
-extern osThreadId_t SpiFlashHandle;
+extern osMutexId myMutexHandle;
+extern osThreadId SpiFlashHandle;
 
 #define FLASH_START_ADDRESS 0x3000
 #define FLASH_END_ADDRESS   0x5000

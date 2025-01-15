@@ -84,8 +84,7 @@ extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim3;
 
-extern osMutexId_t myMutex;
-extern osThreadId_t GSMHandle;
+extern osThreadId GSMHandle;
 
 //Queue_GSM mail_sent_queue;
 

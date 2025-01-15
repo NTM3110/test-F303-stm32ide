@@ -10,7 +10,7 @@
 
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart1;
-extern osThreadId_t GPSHandle;
+extern osThreadId GPSHandle;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 
 void getGPS();

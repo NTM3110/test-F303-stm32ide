@@ -27,13 +27,16 @@ uint8_t rmc_str[128]= {0};
 uint8_t output_buffer[128] = {0};
 
 RingBufferDmaU8_TypeDef GPSRxDMARing;
-extern osMessageQueueId_t RMC_MailQFLASHIdHandle;
+extern osMailQId RMC_MailQFLASHId;
 uint8_t gpsSentence[GPS_STACK_SIZE];
 
 
 // Mail queue identifier FLASH
 RMCSTRUCT rmc = {0};
 RMCSTRUCT rmc_saved = {0};
+
+extern osMutexId myMutexHandle;
+
 
 #define GMT 		000
 
@@ -43,7 +46,7 @@ int hr=0,min=0,day=0,mon=0,yr=0;
 int daychange = 0;
 
 int getRMC_time = 0;
-extern osMutexId_t myMutexHandle;
+extern osMutexId myMutexHandle;
 
 // Haversine formula to calculate distance between two lat/lon points
 double haversine(double lat1, double lon1, double lat2, double lon2) {
@@ -248,14 +251,21 @@ void parse_rmc(uint8_t *rmc_sentence) {
 
 
 void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
-	osStatus_t status = osMessageQueuePut(RMC_MailQFLASHIdHandle, rmcData, 0, 1000);
-	if (status != osOK) {
-	   printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
+	 RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQFLASHId, osWaitForever); // Allocate memory for mail
+	if (mail != NULL) {
+		*mail = *rmcData; // Copy data into allocated memory
+		osStatus status = osMailPut(RMC_MailQFLASHId, mail); // Put message in queue
+		if (status != osOK) {
+			printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
+		}
+		else{
+			printf("\n\n-------------------------SEND message successfullly at GPS: %d ------------------------\n\n", status);
+		}
 	}
 	else{
-		printf("\n\n-------------------------SEND message successfullly at GPS: %d ------------------------\n\n", status);
-
+		printf("CANNOT MALLOC MAIL");
 	}
+
 }
 
 int handleIncomingChar(char c) {
@@ -289,7 +299,7 @@ void getRMC() {
 
         // Handle the character and try to detect $GNRMC
         if (handleIncomingChar(c)){
-            isRMCExist = 1; // `$GNRMC` sentence is ready
+        	isRMCExist = 1; // `$GNRMC` sentence is ready
         }
 
         lastReadIndex = (lastReadIndex + 1) % GPS_STACK_SIZE;
@@ -353,22 +363,21 @@ void StartGPS(void const * argument)
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
-		printf("\n\n----------------------- Inside GPS ------------------------\n\n");
-		uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
-		printf("Thread GPS %p is running low on stack: %04ld bytes remaining\n", GPSHandle, freeStack2);
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		osDelay(500);
-		if(osMutexAcquire(myMutexHandle, osWaitForever) == osOK){
+		if (osMutexWait(myMutexHandle, osWaitForever) == osOK){
+			printf("\n\n----------------------- Inside GPS ------------------------\n\n");
+	//		uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
+	//		printf("Thread GPS %p is running low on stack: %04ld bytes remaining\n", GPSHandle, freeStack2);
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+			osDelay(500);
 //			printf("Hello World!!!!\n");
 			getRMC();
 			osMutexRelease(myMutexHandle);
-		}
 //		printf("\n------------------------------ GPS SENTENCE ------------------------------\n");
 //		printf((char*) gpsSentence);
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-
-		osDelay(500);
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+			osDelay(500);
+		}
 	}
 
   /* USER CODE END StartGPS */

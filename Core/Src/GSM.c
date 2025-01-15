@@ -37,7 +37,7 @@ volatile uint32_t end_addr_disconnect = 0;
 
 char addr_out_gsm[10] = {0};
 
-extern osMessageQueueId_t RMC_MailQGSMIdHandle;
+extern osMailQId RMC_MailQGSMId;
 
 //int is_40s = 0;
 RMCSTRUCT rmc_jt = {0};
@@ -1121,35 +1121,36 @@ int getCurrentTime(){
 
 void receiveRMCDataWithAddrGSM(){
 	printf("Inside Receiving Data at GSM\n\n");
-	osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
-	if(status == osOK){
+	osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
+	if(evt.status == osEventMail){
+		GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
 		printf("Address received from MAIL QUEUE: \n");
-		current_addr_gsm = receivedDataGSM.address;
+		current_addr_gsm = receivedData->address;
 		if(checkAddrExistInQueue(current_addr_gsm, &result_addr_queue) == 0 || (current_addr_gsm >= end_addr_disconnect && current_addr_gsm <= (FLASH_END_ADDRESS - 0x100))){
 //			current_addr_gsm = receivedDataGSM->address;
 			printf("Saving data to variable to send to the server\n");
 			printf("\n---------- Current data accepted at address: %08lx----------\n", current_addr_gsm);
-			rmc_jt.lcation.latitude = receivedDataGSM.rmc.lcation.latitude;
-			rmc_jt.lcation.longitude = receivedDataGSM.rmc.lcation.longitude;
-			rmc_jt.speed = receivedDataGSM.rmc.speed;
-			rmc_jt.course = receivedDataGSM.rmc.course;
-			rmc_jt.lcation.NS = receivedDataGSM.rmc.lcation.NS;
-			rmc_jt.lcation.EW = receivedDataGSM.rmc.lcation.EW;
-			rmc_jt.isValid = receivedDataGSM.rmc.isValid;
-			rmc_jt.date.Yr = receivedDataGSM.rmc.date.Yr;
-			rmc_jt.date.Mon = receivedDataGSM.rmc.date.Mon;
-			rmc_jt.date.Day = receivedDataGSM.rmc.date.Day;
-			rmc_jt.tim.hour = receivedDataGSM.rmc.tim.hour;
-			rmc_jt.tim.min = receivedDataGSM.rmc.tim.min;
-			rmc_jt.tim.sec = receivedDataGSM.rmc.tim.sec;
-
+			rmc_jt.lcation.latitude = receivedData->rmc.lcation.latitude;
+			rmc_jt.lcation.longitude = receivedData->rmc.lcation.longitude;
+			rmc_jt.speed = receivedData->rmc.speed;
+			rmc_jt.course = receivedData->rmc.course;
+			rmc_jt.lcation.NS = receivedData->rmc.lcation.NS;
+			rmc_jt.lcation.EW = receivedData->rmc.lcation.EW;
+			rmc_jt.isValid = receivedData->rmc.isValid;
+			rmc_jt.date.Yr = receivedData->rmc.date.Yr;
+			rmc_jt.date.Mon = receivedData->rmc.date.Mon;
+			rmc_jt.date.Day = receivedData->rmc.date.Day;
+			rmc_jt.tim.hour = receivedData->rmc.tim.hour;
+			rmc_jt.tim.min = receivedData->rmc.tim.min;
+			rmc_jt.tim.sec = receivedData->rmc.tim.sec;
+			osMailFree(RMC_MailQGSMId, receivedData);
 			printf("\n@@@ GSM-> time: %d:%d:%d --------- date: %d/%d/%d  --------- current_addr: %08lx @@@\n", rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec, rmc_jt.date.Day, rmc_jt.date.Mon, rmc_jt.date.Yr, current_addr_gsm);
 
 			received_RMC = 1;
 			count_send_gsm++;
 		}
 		else{
-			printf("\n----------------Have sent data in this address successfully already: %08lx ----------------\n", receivedDataGSM.address);
+			printf("\n----------------Have sent data in this address successfully already: %08lx ----------------\n", receivedData->address);
 		}
 	}
 	else{
@@ -1167,8 +1168,8 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 	int result_send_location = 1;
 	int result_check = 0;
 	while(count_resend < 3){
-		uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
-		printf("\n\n --------------Thread GSM %p is running low on stack: %04ld bytes remaining----------\n\n",GSMHandle, freeStack1);
+//		uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
+//		printf("\n\n --------------Thread GSM %p is running low on stack: %04ld bytes remaining----------\n\n",GSMHandle, freeStack1);
 		printf(" \n\n--------------------------- GOING TO SEND DATA TO SERVER: RESEND COUNT %d -----------------------\n\n", count_resend);
 		result_send_location = send_location_to_server(0, location_info);
 
@@ -1487,10 +1488,12 @@ void StartGSM(void const * argument)
 										printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 										while(1){
 											printf("Receiving MAIL\n");
-											osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
-											if(status == osOK){
-												printf("Receiving MAIL For CLEARING: %08lx\n", receivedDataGSM.address);
+											osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
+											if(evt.status == osEventMail){// Wait for mail
+												GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
+												printf("Receiving MAIL For CLEARING: %08lx\n", receivedData->address);
 												// After processing, free the mail to clear it
+												osMailFree(RMC_MailQGSMId, receivedData);
 											}
 											else{
 												printf("Have cleared out all mail queue\n");
@@ -1582,17 +1585,18 @@ void StartGSM(void const * argument)
 									printf("\n\n---------------- CLEAR THE MAIL QUEUE ---------------------\n\n");
 									while(1){
 										printf("Receiving MAIL\n");
-										osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
-										if(status == osOK){
-
-											printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
-											if(is_keep_up == 0 && receivedDataGSM.address == 0x4F00){
+										osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
+										if(evt.status == osEventMail){
+											GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
+											printf("Receiving MAIL: %08lx\n", receivedData->address);
+											if(is_keep_up == 0 && receivedData->address == 0x4F00){
 												for (int i = 0; i < num_in_mail_sent; i++) {
 													int idx = (result_addr_queue.rear - i + MAX_SIZE) % MAX_SIZE; // Calculate the index in reverse
 													result_addr_queue.data[idx] -= 128;
 												}
 											}
 											// After processing, free the mail to clear it
+											osMailFree(RMC_MailQGSMId, receivedData);
 										}
 										else{
 											printf("Have cleared out all mail queue\n");
@@ -1607,14 +1611,15 @@ void StartGSM(void const * argument)
 									int count_mail_end_addr = 0;
 									while(1){
 										printf("Receiving MAIL\n");
-										osStatus_t status = osMessageQueueGet(RMC_MailQGSMIdHandle, &receivedDataGSM, NULL, 3000); // Wait for mail
-										if(status == osOK){
-
-											printf("Receiving MAIL: %08lx\n", receivedDataGSM.address);
-											if(receivedDataGSM.address == (FLASH_END_ADDRESS - 0X100)){
+										osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
+										if(evt.status == osEventMail){
+											GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
+											printf("Receiving MAIL: %08lx\n", receivedData->address);
+											if(receivedData->address == (FLASH_END_ADDRESS - 0X100)){
 												count_mail_end_addr++;
 											}
 											// After processing, free the mail to clear it
+											osMailFree(RMC_MailQGSMId, receivedData);
 										}
 										else{
 											printf("Have cleared out all mail queue\n");
@@ -1660,9 +1665,9 @@ void StartGSM(void const * argument)
 
 			case 8:
 				//Close CONNECTION
-				uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
-
-				printf("\n\n --------------Thread GSM %p is running low on stack: %04ld bytes remaining----------\n\n",GSMHandle, freeStack1);
+//				uint32_t freeStack1 = osThreadGetStackSpace(GSMHandle);
+//
+//				printf("\n\n --------------Thread GSM %p is running low on stack: %04ld bytes remaining----------\n\n",GSMHandle, freeStack1);
 				int result_close = close_connection(0);
 				if(result_close){
 					memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
