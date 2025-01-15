@@ -29,6 +29,7 @@
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
+typedef StaticQueue_t osStaticMessageQDef_t;
 /* USER CODE BEGIN PTD */
 /* USER CODE END PTD */
 
@@ -114,13 +115,25 @@ const osThreadAttr_t GSM_attributes = {
 };
 /* Definitions for RMC_MailQFLASHId */
 osMessageQueueId_t RMC_MailQFLASHIdHandle;
+uint8_t RMC_MailQFLASHIdBuffer[ 3 * 88 ];
+osStaticMessageQDef_t RMC_MailQFLASHIdControlBlock;
 const osMessageQueueAttr_t RMC_MailQFLASHId_attributes = {
-  .name = "RMC_MailQFLASHId"
+  .name = "RMC_MailQFLASHId",
+  .cb_mem = &RMC_MailQFLASHIdControlBlock,
+  .cb_size = sizeof(RMC_MailQFLASHIdControlBlock),
+  .mq_mem = &RMC_MailQFLASHIdBuffer,
+  .mq_size = sizeof(RMC_MailQFLASHIdBuffer)
 };
 /* Definitions for RMC_MailQGSMId */
 osMessageQueueId_t RMC_MailQGSMIdHandle;
+uint8_t RMC_MailQGSMIdBuffer[ 32 * 96 ];
+osStaticMessageQDef_t RMC_MailQGSMIdControlBlock;
 const osMessageQueueAttr_t RMC_MailQGSMId_attributes = {
-  .name = "RMC_MailQGSMId"
+  .name = "RMC_MailQGSMId",
+  .cb_mem = &RMC_MailQGSMIdControlBlock,
+  .cb_size = sizeof(RMC_MailQGSMIdControlBlock),
+  .mq_mem = &RMC_MailQGSMIdBuffer,
+  .mq_size = sizeof(RMC_MailQGSMIdBuffer)
 };
 /* Definitions for tax_MailQId */
 osMessageQueueId_t tax_MailQIdHandle;
@@ -260,13 +273,6 @@ int main(void)
   /* Create the mutex(es) */
   /* creation of myMutex */
   myMutexHandle = osMutexNew(&myMutex_attributes);
-
-  if (myMutexHandle == NULL) {
-      printf("Mutex creation failed!\n");
-      while (1);  // If mutex creation fails, halt here
-  } else {
-      printf("Mutex created successfully!\n");
-  }
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -988,7 +994,6 @@ void StartDefaultTask(void *argument)
   }
   /* USER CODE END 5 */
 }
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode

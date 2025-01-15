@@ -654,8 +654,6 @@ void receiveRMCDataFromGPS(void) {
 			rmc_flash.date.Day = receivedDataRMCFLASH.date.Day;
 			osMutexRelease(myMutexHandle);
 		}
-
-
 		if(rmc_flash.date.Yr >= 24){
 			countRMCReceived++;
 			printf("\n\n --------------------------------- COUNT RMC RECEIVED AT SPI FLASH is %d --------------------------\n\n", countRMCReceived);
@@ -694,33 +692,32 @@ void receiveRMCDataFromGPS(void) {
 //				sendRMCDataWithAddrToGSM(&mail_gsm);
 				countRMCReceived = 0;
 			}
-//			else{
-//				printf("\n\n ---------------------------- There is no mail in SPI FLASH FROM GPS ------------------\n\n");
-//				/*
-//				 * CASE 1: Sent the data from flash successfully so move to the next page.
-//				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
-//				 */
-//				if(is_using_flash == 1 && is_disconnect == 0 && is_keep_up == 1){
-//					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue) && (start_addr_disconnect <= (FLASH_END_ADDRESS - 0x100))){
-//						Uint32ToHex(start_addr_disconnect, addr_out_flash, 8);
-//						printf("\n-------SKIPPING address cause it was sent already: %s--------\n", addr_out_flash);
-//						if(start_addr_disconnect <= (current_addr - 128)) start_addr_disconnect +=128;
-//					}
-//					else{
-//						addr_to_get_from_FLASH = start_addr_disconnect - (count_shiftleft * 128);
-//						if(addr_to_get_from_FLASH < FLASH_START_ADDRESS) addr_to_get_from_FLASH = FLASH_START_ADDRESS;
-//						Uint32ToHex(start_addr_disconnect, addr_out_flash, 8);
-//						printf("\n---------------- Sending data in disconnected phase to GSM: %s -------------------\n", addr_out_flash);
-//						mail_gsm.rmc = readFlash(addr_to_get_from_FLASH);
-//						mail_gsm.address = start_addr_disconnect;
+			else{
+				printf("\n\n ---------------------------- There is no mail in SPI FLASH FROM GPS ------------------\n\n");
+				/*
+				 * CASE 1: Sent the data from flash successfully so move to the next page.
+				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
+				 */
+				if(is_using_flash == 1 && is_disconnect == 0 && is_keep_up == 1){
+					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue) && (start_addr_disconnect <= (FLASH_END_ADDRESS - 0x100))){
+						Uint32ToHex(start_addr_disconnect, addr_out_flash, 8);
+						printf("\n-------SKIPPING address cause it was sent already: %s--------\n", addr_out_flash);
+						if(start_addr_disconnect <= (current_addr - 128)) start_addr_disconnect +=128;
+					}
+					else{
+						addr_to_get_from_FLASH = start_addr_disconnect - (count_shiftleft * 128);
+						if(addr_to_get_from_FLASH < FLASH_START_ADDRESS) addr_to_get_from_FLASH = FLASH_START_ADDRESS;
+						Uint32ToHex(start_addr_disconnect, addr_out_flash, 8);
+						printf("\n---------------- Sending data in disconnected phase to GSM: %s -------------------\n", addr_out_flash);
+						mail_gsm.rmc = readFlash(addr_to_get_from_FLASH);
+						mail_gsm.address = start_addr_disconnect;
 //						if(is_read_flash_valid == 1)
 //							sendRMCDataWithAddrToGSM(&mail_gsm);
-//					}
-//				}
-//				//is_over_flow = 0;
-//			}
+					}
+				}
+				//is_over_flow = 0;
+			}
 		}
-		// Free memory after use
 	}
 	else{
 		printf("\n\n-------------------------- RECEIVED MAIL FROM GPS AT SPI FLASH FAILED: %d ------------------------\n\n",status);
