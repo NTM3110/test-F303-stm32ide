@@ -349,7 +349,6 @@ void getRMC() {
 			printf("\n\n------------ DATA FROM GPS MODULE IS NOT VALID YET ------------\n\n");
 		}
 
-
         // Clear RMC data after processing
         memset(rmc_str, 0x00, sizeof(rmc_str));
         isRMCExist = 0;

@@ -905,7 +905,7 @@ int acknowledgeResponse(int connect_id){
 	int count_resend = 0;
 	int is_sent_ok = 0;
 
-	while(count_resend <= 3){
+	while(count_resend <= 5){
 		is_sent_ok = 1;
 		snprintf((char *)command, sizeof(command), "AT+QISEND=%d,0\r\n", connect_id);
 		send_AT_command((char*)command);
@@ -946,8 +946,8 @@ int acknowledgeResponse(int connect_id){
 		SIM_UART_ReInitializeRxDMA();
 		if (result == 3) {
 			if (unackedBytes > 0) {
-				count_resend++;
 				is_sent_ok = 0;
+				break;
 			}
 			else{
 				printf("NO DATA LOSS\n");
@@ -964,7 +964,7 @@ int getResponseFromServer(int connect_id){
 	int count_resend = 0;
 	int is_sent_ok = 0;
 	printf("\n\n---------------- IN QIRD: 0X1500h ------------------\n\n");
-	for(size_t i = 0; i < 5; i++){
+	for(size_t i = 0; i < 7; i++){
 		snprintf((char *)command, sizeof(command), "AT+QIRD=%d,100\r\n", connect_id);
 		send_AT_command((char*)command);
 		printf("\n\n---------------- IN QIRD:0X100 SENDING COUNT: %d ------------------\n\n", count_resend);
@@ -1217,9 +1217,7 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 	memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 	SIM_UART_ReInitializeRxDMA();
 
-	if(result_send_location == 0 || result_check == 0) return 0;
-	else if(result_send_location  == 2) return 2;
-	else return 0;
+	return 0;
 }
 
 void StartGSM(void const * argument)
