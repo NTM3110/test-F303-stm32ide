@@ -289,6 +289,27 @@ int handleIncomingChar(char c) {
     return 0;
 }
 
+void Kalman_Init(KalmanFilter* kf, double processNoise, double measurementNoise, double initialEstimate) {
+    kf->x = initialEstimate;
+    kf->p = 1.0;  // Initial uncertainty
+    kf->q = processNoise;
+    kf->r = measurementNoise;
+    kf->k = 0.0;  // Kalman gain starts at 0
+}
+
+double Kalman_Update(KalmanFilter* kf, double measurement) {
+    // Prediction step
+    kf->p += kf->q;
+
+    // Update step
+    kf->k = kf->p / (kf->p + kf->r);  // Compute Kalman gain
+    kf->x += kf->k * (measurement - kf->x);  // Update estimate
+    kf->p *= (1.0 - kf->k);  // Update uncertainty
+
+    return kf->x;
+}
+
+
 void getRMC() {
     static uint16_t lastReadIndex = 0; // Tracks the last read position in DMA
     uint16_t writeIndex = GPS_STACK_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart2_rx);

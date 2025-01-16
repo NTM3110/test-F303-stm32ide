@@ -59,7 +59,7 @@ void st25r95_init(st25r95_handle *handler) {
   switch (handler->protocol) {
     case ST25_PROTOCOL_14443A:
       st25r95_14443A(handler);
-      st25r95_write_timerw(handler, handler->timerw)a;
+      st25r95_write_timerw(handler, handler->timerw);
       st25r95_write_ARC(handler, 1, handler->ARC);
       break;
     default:

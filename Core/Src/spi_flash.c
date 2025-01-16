@@ -326,27 +326,6 @@ int W25_ShiftLeftFlashDataByPage(void) {
     return HAL_OK;
 }
 
-void Kalman_Init(KalmanFilter* kf, double processNoise, double measurementNoise, double initialEstimate) {
-    kf->x = initialEstimate;
-    kf->p = 1.0;  // Initial uncertainty
-    kf->q = processNoise;
-    kf->r = measurementNoise;
-    kf->k = 0.0;  // Kalman gain starts at 0
-}
-
-double Kalman_Update(KalmanFilter* kf, double measurement) {
-    // Prediction step
-    kf->p += kf->q;
-
-    // Update step
-    kf->k = kf->p / (kf->p + kf->r);  // Compute Kalman gain
-    kf->x += kf->k * (measurement - kf->x);  // Update estimate
-    kf->p *= (1.0 - kf->k);  // Update uncertainty
-
-    return kf->x;
-}
-
-
 void receiveTaxData(void) {
 //	uint8_t output_buffer[200];
 	int k = 0;
@@ -641,7 +620,7 @@ void receiveRMCDataFromGPS(void) {
 	if(evt.status == osEventMail){
 		printf("\nReceived  RMC Data SPI FLASH: \n");
 		RMCSTRUCT *receivedData = (RMCSTRUCT *)evt.value.p;
-	//Sending DATA to GSM
+		//Sending DATA to GSM
 		rmc_flash.lcation.latitude = receivedData->lcation.latitude;
 		rmc_flash.lcation.longitude = receivedData->lcation.longitude;
 		rmc_flash.speed = receivedData->speed;
@@ -691,32 +670,32 @@ void receiveRMCDataFromGPS(void) {
 				mail_gsm.address = current_addr;
 
 				printf("-------------------SENDING CURRENT ADDR DATA: %08lx----------------------", mail_gsm.address);
-//				sendRMCDataWithAddrToGSM(&mail_gsm);
+				sendRMCDataWithAddrToGSM(&mail_gsm);
 				countRMCReceived = 0;
 			}
-//			else{
-//				printf("\n\n ---------------------------- There is no mail in SPI FLASH FROM GPS ------------------\n\n");
-//				/*
-//				 * CASE 1: Sent the data from flash successfully so move to the next page.
-//				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
-//				 */
-//				if(is_using_flash == 1 && is_disconnect == 0 && is_keep_up == 1){
-//					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue) && (start_addr_disconnect <= (FLASH_END_ADDRESS - 0x100))){
-//						printf("\n-------SKIPPING address cause it was sent already: %08lx--------\n", start_addr_disconnect);
-//						if(start_addr_disconnect <= (current_addr - 128)) start_addr_disconnect +=128;
-//					}
-//					else{
-//						addr_to_get_from_FLASH = start_addr_disconnect - (count_shiftleft * 128);
-//						if(addr_to_get_from_FLASH < FLASH_START_ADDRESS) addr_to_get_from_FLASH = FLASH_START_ADDRESS;
-//						printf("\n---------------- Sending data in disconnected phase to GSM: %08lx -------------------\n", start_addr_disconnect);
-//						mail_gsm.rmc = readFlash(addr_to_get_from_FLASH);
-//						mail_gsm.address = start_addr_disconnect;
-////						if(is_read_flash_valid == 1)
-////							sendRMCDataWithAddrToGSM(&mail_gsm);
-//					}
-//				}
-//				//is_over_flow = 0;
-//			}
+			else{
+				printf("\n\n ---------------------------- NOT SENDING CURRENT ADDR DATA yet ------------------\n\n");
+				/*
+				 * CASE 1: Sent the data from flash successfully so move to the next page.
+				 * CASE 2: When disconnect and reconnect have sent the data from queue then disconnect again so update the end address
+				 */
+				if(is_using_flash == 1 && is_disconnect == 0 && is_keep_up == 1){
+					if(checkAddrExistInQueue(start_addr_disconnect, &result_addr_queue) && (start_addr_disconnect <= (FLASH_END_ADDRESS - 0x100))){
+						printf("\n-------SKIPPING address cause it was sent already: %08lx--------\n", start_addr_disconnect);
+						if(start_addr_disconnect <= (current_addr - 128)) start_addr_disconnect +=128;
+					}
+					else{
+						addr_to_get_from_FLASH = start_addr_disconnect - (count_shiftleft * 128);
+						if(addr_to_get_from_FLASH < FLASH_START_ADDRESS) addr_to_get_from_FLASH = FLASH_START_ADDRESS;
+						printf("\n---------------- Sending data in disconnected phase to GSM: %08lx -------------------\n", start_addr_disconnect);
+						mail_gsm.rmc = readFlash(addr_to_get_from_FLASH);
+						mail_gsm.address = start_addr_disconnect;
+						if(is_read_flash_valid == 1)
+							sendRMCDataWithAddrToGSM(&mail_gsm);
+					}
+				}
+				//is_over_flow = 0;
+			}
 		}
 	}
 	else{

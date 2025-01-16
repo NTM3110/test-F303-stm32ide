@@ -22,5 +22,5 @@
 ../Core/Src/spi_flash.c:541:6:sendRMCDataWithAddrToGSM	3
 ../Core/Src/spi_flash.c:552:6:parseRMCString	2
 ../Core/Src/spi_flash.c:594:11:readFlash	3
-../Core/Src/spi_flash.c:634:6:receiveRMCDataFromGPS	4
+../Core/Src/spi_flash.c:634:6:receiveRMCDataFromGPS	11
 ../Core/Src/spi_flash.c:729:6:StartSpiFlash	4

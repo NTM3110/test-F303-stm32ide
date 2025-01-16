@@ -229,7 +229,7 @@ int main(void)
   tax_MailQId = osMailCreate(osMailQ(Tax_MailQ), NULL);
   /* USER CODE END RTOS_QUEUES */
 
-  /* Create the thread(s) */
+//  /* Create the thread(s) */
 //  /* definition and creation of defaultTask */
 //  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 64);
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
@@ -237,7 +237,7 @@ int main(void)
 //  /* definition and creation of ControllingLED */
 //  osThreadDef(ControllingLED, StartControllingLED, osPriorityLow, 0, 64);
 //  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
-//
+
 //  /* definition and creation of UART1 */
 //  osThreadDef(UART1, StartUART1, osPriorityLow, 0, 64);
 //  UART1Handle = osThreadCreate(osThread(UART1), NULL);
@@ -255,8 +255,8 @@ int main(void)
 //  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
   /* definition and creation of GSM */
-//  osThreadDef(GSM, StartGSM, osPriorityLow, 0, 896);
-//  GSMHandle = osThreadCreate(osThread(GSM), NULL);
+  osThreadDef(GSM, StartGSM, osPriorityLow, 0, 896);
+  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 //  /* add threads, ... */
@@ -471,8 +471,6 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END RTC_Init 0 */
 
-//  RTC_TimeTypeDef sTime = {0};
-//  RTC_DateTypeDef sDate = {0};
 
   /* USER CODE BEGIN RTC_Init 1 */
 
@@ -907,6 +905,8 @@ void StartDefaultTask(void const * argument)
   }
   /* USER CODE END 5 */
 }
+
+
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM2 interrupt took place, inside
