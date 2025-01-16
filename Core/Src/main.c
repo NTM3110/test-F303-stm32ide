@@ -229,15 +229,15 @@ int main(void)
   tax_MailQId = osMailCreate(osMailQ(Tax_MailQ), NULL);
   /* USER CODE END RTOS_QUEUES */
 
-//  /* Create the thread(s) */
-//  /* definition and creation of defaultTask */
+  /* Create the thread(s) */
+  /* definition and creation of defaultTask */
 //  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 64);
 //  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 //
 //  /* definition and creation of ControllingLED */
 //  osThreadDef(ControllingLED, StartControllingLED, osPriorityLow, 0, 64);
 //  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
-
+//
 //  /* definition and creation of UART1 */
 //  osThreadDef(UART1, StartUART1, osPriorityLow, 0, 64);
 //  UART1Handle = osThreadCreate(osThread(UART1), NULL);
@@ -471,6 +471,8 @@ static void MX_RTC_Init(void)
 
   /* USER CODE END RTC_Init 0 */
 
+//  RTC_TimeTypeDef sTime = {0};
+//  RTC_DateTypeDef sDate = {0};
 
   /* USER CODE BEGIN RTC_Init 1 */
 

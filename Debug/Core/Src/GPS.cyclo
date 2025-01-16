@@ -10,5 +10,7 @@
 ../Core/Src/GPS.c:181:6:parse_rmc	15
 ../Core/Src/GPS.c:253:6:sendRMCDataToFlash	3
 ../Core/Src/GPS.c:271:5:handleIncomingChar	4
-../Core/Src/GPS.c:292:6:getRMC	9
-../Core/Src/GPS.c:353:6:StartGPS	2
+../Core/Src/GPS.c:292:6:Kalman_Init	1
+../Core/Src/GPS.c:300:8:Kalman_Update	1
+../Core/Src/GPS.c:313:6:getRMC	9
+../Core/Src/GPS.c:375:6:StartGPS	2

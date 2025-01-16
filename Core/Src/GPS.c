@@ -345,8 +345,10 @@ void getRMC() {
 			printf("\n\n------------ GPS BUG: Sending latest RMC ------------\n\n");
 			get_RTC_time_date(&rmc_saved);
 			sendRMCDataToFlash(&rmc_saved);
+			getRMC_time++;
 		} else{
 			printf("\n\n------------ DATA FROM GPS MODULE IS NOT VALID YET ------------\n\n");
+			getRMC_time++;
 		}
 
         // Clear RMC data after processing
