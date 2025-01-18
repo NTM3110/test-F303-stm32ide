@@ -381,21 +381,21 @@ void StartGPS(void const * argument)
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
-//		if (osMutexWait(myMutexHandle, osWaitForever) == osOK){
-		printf("\n\n----------------------- Inside GPS ------------------------\n\n");
-//		uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
-//		printf("Thread GPS %p is running low on stack: %04ld bytes remaining\n", GPSHandle, freeStack2);
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-		osDelay(500);
-//			printf("Hello World!!!!\n");
-		getRMC();
-//			osMutexRelease(myMutexHandle);
-//		printf("\n------------------------------ GPS SENTENCE ------------------------------\n");
-//		printf((char*) gpsSentence);
+		if (osMutexWait(myMutexHandle, osWaitForever) == osOK){
+			printf("\n\n----------------------- Inside GPS ------------------------\n\n");
+	//		uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
+	//		printf("Thread GPS %p is running low on stack: %04ld bytes remaining\n", GPSHandle, freeStack2);
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+			osDelay(500);
+	//			printf("Hello World!!!!\n");
+			getRMC();
+			osMutexRelease(myMutexHandle);
+	//		printf("\n------------------------------ GPS SENTENCE ------------------------------\n");
+	//		printf((char*) gpsSentence);
 
-		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-		osDelay(500);
-//		}
+			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+			osDelay(500);
+		}
 	}
 
   /* USER CODE END StartGPS */

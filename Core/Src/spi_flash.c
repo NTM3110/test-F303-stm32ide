@@ -737,21 +737,23 @@ void StartSpiFlash(void const * argument)
 	}
 
 	for(;;){
-		osDelay(500);
 		printf("\n\n--------------------------- INSIDE SPI FLASH --------------------------------\n\n");
+
 //		uint32_t freeStack2 = osThreadGetStackSpace(SpiFlashHandle);
 //		printf("\n\n --------------Thread SPI FLASH %p stack: %04ld bytes remaining----------\n\n", SpiFlashHandle, freeStack2);
-		W25_Reset();
-		W25_ReadJedecID();
-		W25_Reset();
-		W25_ReadData(current_addr, flashBufferRMCReceived, 128);
-		char spi_flash_data_intro[] = "Flash DATA received: ";
-		HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
-		//receiveTaxData();
-		receiveRMCDataFromGPS();
-		printf("\n\n");
-		osDelay(500);
-//		osDelay(100);
+		if (osMutexWait(myMutexHandle, osWaitForever) == osOK){
+			W25_Reset();
+			W25_ReadJedecID();
+			W25_Reset();
+			W25_ReadData(current_addr, flashBufferRMCReceived, 128);
+			char spi_flash_data_intro[] = "Flash DATA received: ";
+			HAL_UART_Transmit(&huart1, (uint8_t*) spi_flash_data_intro, strlen(spi_flash_data_intro), 1000);
+			//receiveTaxData();
+			receiveRMCDataFromGPS();
+			printf("\n\n");
+			osMutexRelease(myMutexHandle);
+			osDelay(1000);
+		}
 	}
   /* USER CODE END StartSpiFlash */
 }
