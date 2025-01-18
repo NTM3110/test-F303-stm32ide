@@ -21,4 +21,4 @@
 ../Core/Src/spi_flash.c:531:6:parseRMCString	2
 ../Core/Src/spi_flash.c:573:11:readFlash	3
 ../Core/Src/spi_flash.c:613:6:receiveRMCDataFromGPS	11
-../Core/Src/spi_flash.c:708:6:StartSpiFlash	4
+../Core/Src/spi_flash.c:708:6:StartSpiFlash	3

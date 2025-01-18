@@ -29,7 +29,6 @@ uint8_t count_shiftleft = 0;
 int is_pushing_data = 0;
 int count_check_csq = 0;
 
-int count_send_gsm = 0;
 Queue_GSM result_addr_queue;
 volatile uint32_t start_addr_disconnect = 0;
 volatile uint32_t current_addr_gsm = 0;
@@ -1147,7 +1146,6 @@ void receiveRMCDataWithAddrGSM(){
 			printf("\n@@@ GSM-> time: %d:%d:%d --------- date: %d/%d/%d  --------- current_addr: %08lx @@@\n", rmc_jt.tim.hour, rmc_jt.tim.min, rmc_jt.tim.sec, rmc_jt.date.Day, rmc_jt.date.Mon, rmc_jt.date.Yr, current_addr_gsm);
 
 			received_RMC = 1;
-			count_send_gsm++;
 		}
 		else{
 			printf("\n----------------Have sent data in this address successfully already: %08lx ----------------\n", receivedData->address);
@@ -1178,7 +1176,6 @@ int processUploadDataToServer(JT808_LocationInfoReport *location_info){
 			result_check = check_data_sent_to_server(0);
 			if(result_check){
 				printf("Sending SUCCESS\n");
-				printf("\n\n--------------------------------- COUNT SEND GSM: %d -------------------------------------------\n\n", count_send_gsm);
 //				receive_response("Check location report\n");
 				memset(response, 0x00, SIM_RESPONSE_MAX_SIZE);
 				SIM_UART_ReInitializeRxDMA();
@@ -1404,8 +1401,6 @@ void StartGSM(void const * argument)
 						received_RMC = 0;
 						printf("RECEIVED RMC DATA AT GSM MODULE\n");
 						save_rmc_to_location_info(&location_info);
-						printf("Address going to send to server at GSM:(STACK FROM MAIL QUEUE)  %08lx\n", current_addr_gsm);
-
 
 						//CHECK SIGNAL QUALITY
 						for(size_t i = 0; i < 3 ; i++){
@@ -1586,7 +1581,7 @@ void StartGSM(void const * argument)
 										osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
 										if(evt.status == osEventMail){
 											GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
-											printf("Receiving MAIL: %08lx\n", receivedData->address);
+											printf("Receiving MAIL FOR CLEARING: %08lx\n", receivedData->address);
 											if(is_keep_up == 0 && receivedData->address == 0x4F00){
 												for (int i = 0; i < num_in_mail_sent; i++) {
 													int idx = (result_addr_queue.rear - i + MAX_SIZE) % MAX_SIZE; // Calculate the index in reverse
@@ -1612,7 +1607,7 @@ void StartGSM(void const * argument)
 										osEvent evt = osMailGet(RMC_MailQGSMId, 3000); // Wait for mail
 										if(evt.status == osEventMail){
 											GSM_MAIL_STRUCT *receivedData = (GSM_MAIL_STRUCT *)evt.value.p;
-											printf("Receiving MAIL: %08lx\n", receivedData->address);
+											printf("Receiving MAIL for CLEARING: %08lx\n", receivedData->address);
 											if(receivedData->address == (FLASH_END_ADDRESS - 0X100)){
 												count_mail_end_addr++;
 											}
