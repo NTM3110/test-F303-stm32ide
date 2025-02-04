@@ -352,11 +352,11 @@ void getRMC() {
         isRMCExist = 0;
     }
 
-    // GPS timeout logic
-//    if (getRMC_time >= 150 && getRMC_time % 150 == 0) {
-//        printf("\n\n-------------------  COLD START GPS module -----------------------\n\n");
-//        coldStart();
-//    }
+    //GPS timeout logic
+    if (getRMC_time >= 400 && getRMC_time % 400 == 0) {
+        printf("\n\n-------------------  COLD START GPS module -----------------------\n\n");
+        coldStart();
+    }
 
     if (getRMC_time >= 1200) {
         GPS_DISABLE();

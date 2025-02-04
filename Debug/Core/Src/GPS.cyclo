@@ -10,5 +10,5 @@
 ../Core/Src/GPS.c:267:5:handleIncomingChar	4
 ../Core/Src/GPS.c:288:6:Kalman_Init	1
 ../Core/Src/GPS.c:296:8:Kalman_Update	1
-../Core/Src/GPS.c:309:6:getRMC	7
+../Core/Src/GPS.c:309:6:getRMC	9
 ../Core/Src/GPS.c:371:6:StartGPS	2

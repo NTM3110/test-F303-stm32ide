@@ -1,0 +1,4 @@
+../Core/Src/AHRSAlgorithms.c:35:6:initializeParameters	1
+../Core/Src/AHRSAlgorithms.c:45:6:MadgwickQuaternionUpdate	3
+../Core/Src/AHRSAlgorithms.c:142:6:MahonyQuaternionUpdate	3
+../Core/Src/AHRSAlgorithms.c:234:15:getQ	1
