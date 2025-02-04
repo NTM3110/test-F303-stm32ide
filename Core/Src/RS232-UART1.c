@@ -13,7 +13,7 @@
 
 uint16_t j,k,cnt,check;
 RingBufferDmaU8_TypeDef rs232Ext2RxDMARing;
-extern osMessageQueueId_t tax_MailQId;
+extern osMailQId tax_MailQId;
 
 uint8_t taxBuffer[128];
 uint8_t gsvSentence[2048];
@@ -84,7 +84,14 @@ void rs232Ext2_InitializeRxDMA(void)// ham khoi tao lai DMA
 }
 
 void sendTaxData(uint8_t *arrayData, uint32_t size) {
-	osMessageQueuePut(tax_MailQId, arrayData, 0, osWaitForever);// Put mail in queue
+	TAX_MAIL_STRUCT *mail = (TAX_MAIL_STRUCT *)osMailAlloc(tax_MailQId, osWaitForever); // Allocate mail
+	if (mail != NULL) {
+		// Copy data into the mail structure (up to ARRAY_SIZE)
+		for (int i = 0; i < size ; i++) {
+			mail->data[i] = arrayData[i];
+		}
+		osMailPut(tax_MailQId, mail); // Put mail in queue
+	}
 }
 
 void Bill_Decode(){

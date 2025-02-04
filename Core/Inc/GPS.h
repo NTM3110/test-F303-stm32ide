@@ -6,11 +6,11 @@
 #define GPS_GPIO_Port		GPIOC	
 #define GPS_GPIO_Pin		GPIO_PIN_2
 
-#define GPS_STACK_SIZE 		5760
+#define GPS_STACK_SIZE 		4480
 
 extern UART_HandleTypeDef huart2;
 extern UART_HandleTypeDef huart1;
-extern osThreadId_t GPSHandle;
+extern osThreadId GPSHandle;
 extern DMA_HandleTypeDef hdma_usart2_rx;
 
 void getGPS();

@@ -19,6 +19,3 @@
 ../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:925:12:xStreamBufferIsFull	2
 ../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:960:12:xStreamBufferSendCompletedFromISR	3
 ../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:990:12:xStreamBufferReceiveCompletedFromISR	3
-../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:1173:14:uxStreamBufferGetStreamBufferNumber	1
-../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:1183:7:vStreamBufferSetStreamBufferNumber	1
-../Middlewares/Third_Party/FreeRTOS/Source/stream_buffer.c:1193:10:ucStreamBufferGetStreamBufferType	1

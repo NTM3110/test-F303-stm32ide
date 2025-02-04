@@ -14,7 +14,7 @@
 #define APN_PASSWD									""
 #define APN_AUTHEN									1
 #define SERVICE_TYPE 								"TCP"
-#define IP_ADDRESS									"104.237.9.196"
+#define IP_ADDRESS									"142.4.205.26"
 #define REMOTE_PORT									5015
 #define CHECK_RESPONSE								"OK"
 // JT808 MESSAGE STRUCT
@@ -84,8 +84,7 @@ extern UART_HandleTypeDef huart3;
 extern UART_HandleTypeDef huart1;
 extern TIM_HandleTypeDef htim3;
 
-extern osMutexId_t myMutex;
-extern osThreadId_t GSMHandle;
+extern osThreadId GSMHandle;
 
 //Queue_GSM mail_sent_queue;
 

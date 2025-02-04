@@ -34,6 +34,8 @@ void st25r95_service(st25r95_handle *handler) {
 }
 
 uint8_t *st25r95_response(st25r95_handle *handler) {
+
+//TODO: CHANGE TO POLLING MODE DUE TO LACK OF IRQ_OUT signal
   while (handler->irq_flag == 0);
   handler->irq_flag = 0;
   static uint8_t rx_data[256];
@@ -433,9 +435,9 @@ void reader_disable(){
 }
 
 void reader_irq_pulse() {
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_RESET);
   osDelay(1);
-  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_6, GPIO_PIN_SET);
   osDelay(8);
 }
 
@@ -456,7 +458,7 @@ void reader_rx(uint8_t *data, size_t len) {
 
 // Define a callback function when tag detected
 void st25_card_callback(uint8_t* uid) {
-  uart_transmit_string(&huart1,uid);
+  printf((char*)uid);
 }
 
 void StartRFID(void const * argument){

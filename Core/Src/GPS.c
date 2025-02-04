@@ -27,7 +27,7 @@ uint8_t rmc_str[128]= {0};
 uint8_t output_buffer[128] = {0};
 
 RingBufferDmaU8_TypeDef GPSRxDMARing;
-extern osMessageQueueId_t RMC_MailQFLASHIdHandle;
+extern osMailQId RMC_MailQFLASHId;
 uint8_t gpsSentence[GPS_STACK_SIZE];
 
 
@@ -35,38 +35,36 @@ uint8_t gpsSentence[GPS_STACK_SIZE];
 RMCSTRUCT rmc = {0};
 RMCSTRUCT rmc_saved = {0};
 
-#define GMT 		000
+//extern osMutexId myMutexHandle;
+
 
 int isRMCExist = 0;
-int inx = 0;
-int hr=0,min=0,day=0,mon=0,yr=0;
-int daychange = 0;
 
 int getRMC_time = 0;
-extern osMutexId_t myMutexHandle;
+extern osMutexId myMutexHandle;
 
 // Haversine formula to calculate distance between two lat/lon points
-double haversine(double lat1, double lon1, double lat2, double lon2) {
-    // Convert degrees to radians
-    lat1 = DEG_TO_RAD(lat1);
-    lon1 = DEG_TO_RAD(lon1);
-    lat2 = DEG_TO_RAD(lat2);
-    lon2 = DEG_TO_RAD(lon2);
-
-    // Haversine formula
-    double dlat = lat2 - lat1;
-    double dlon = lon2 - lon1;
-    double a = sin(dlat / 2) * sin(dlat / 2) +
-               cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
-    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
-    return EARTH_RADIUS_KM * c;  // Distance in kilometers
-}
-
-// Function to check if the new position is within 1 km of the last position
-int isWithinThreshold(double lat1, double lon1, double lat2, double lon2, double threshold) {
-    double distance = haversine(lat1, lon1, lat2, lon2);
-    return distance <= threshold;
-}
+//double haversine(double lat1, double lon1, double lat2, double lon2) {
+//    // Convert degrees to radians
+//    lat1 = DEG_TO_RAD(lat1);
+//    lon1 = DEG_TO_RAD(lon1);
+//    lat2 = DEG_TO_RAD(lat2);
+//    lon2 = DEG_TO_RAD(lon2);
+//
+//    // Haversine formula
+//    double dlat = lat2 - lat1;
+//    double dlon = lon2 - lon1;
+//    double a = sin(dlat / 2) * sin(dlat / 2) +
+//               cos(lat1) * cos(lat2) * sin(dlon / 2) * sin(dlon / 2);
+//    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+//    return EARTH_RADIUS_KM * c;  // Distance in kilometers
+//}
+//
+//// Function to check if the new position is within 1 km of the last position
+//int isWithinThreshold(double lat1, double lon1, double lat2, double lon2, double threshold) {
+//    double distance = haversine(lat1, lon1, lat2, lon2);
+//    return distance <= threshold;
+//}
 
 void copy_array(uint8_t *des, uint8_t *src, int size){
 	for(size_t i = 0 ;i <  size; i++){
@@ -177,7 +175,7 @@ time_t convertToEpoch(int year, int month, int day, int hour, int min, int sec) 
 
 void parse_rmc(uint8_t *rmc_sentence) {
     int field = 0;
-    uint8_t str_cpy[128];
+    uint8_t str_cpy[128] = {0};
     strcpy((char*)str_cpy,(char*) rmc_sentence);
     str_cpy[sizeof(str_cpy) - 1] = '\0';
 
@@ -248,14 +246,22 @@ void parse_rmc(uint8_t *rmc_sentence) {
 
 
 void sendRMCDataToFlash(RMCSTRUCT *rmcData) {
-	osStatus_t status = osMessageQueuePut(RMC_MailQFLASHIdHandle, rmcData, 0, 1000);
-	if (status != osOK) {
-	   printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
+	 RMCSTRUCT *mail = (RMCSTRUCT *)osMailAlloc(RMC_MailQFLASHId, osWaitForever); // Allocate memory for mail
+	if (mail != NULL) {
+		*mail = *rmcData; // Copy data into allocated memory
+		osStatus status = osMailPut(RMC_MailQFLASHId, mail); // Put message in queue
+		if (status != osOK) {
+			printf("\n\n-------------------------Failed to send message: %d ------------------------\n\n", status);
+			osMailFree(RMC_MailQFLASHId, mail);
+		}
+		else{
+			printf("\n\n-------------------------SEND message successfullly at GPS: %d ------------------------\n\n", status);
+		}
 	}
 	else{
-		printf("\n\n-------------------------SEND message successfullly at GPS: %d ------------------------\n\n", status);
-
+		printf("CANNOT MALLOC MAIL");
 	}
+
 }
 
 int handleIncomingChar(char c) {
@@ -279,6 +285,27 @@ int handleIncomingChar(char c) {
     return 0;
 }
 
+void Kalman_Init(KalmanFilter* kf, double processNoise, double measurementNoise, double initialEstimate) {
+    kf->x = initialEstimate;
+    kf->p = 1.0;  // Initial uncertainty
+    kf->q = processNoise;
+    kf->r = measurementNoise;
+    kf->k = 0.0;  // Kalman gain starts at 0
+}
+
+double Kalman_Update(KalmanFilter* kf, double measurement) {
+    // Prediction step
+    kf->p += kf->q;
+
+    // Update step
+    kf->k = kf->p / (kf->p + kf->r);  // Compute Kalman gain
+    kf->x += kf->k * (measurement - kf->x);  // Update estimate
+    kf->p *= (1.0 - kf->k);  // Update uncertainty
+
+    return kf->x;
+}
+
+
 void getRMC() {
     static uint16_t lastReadIndex = 0; // Tracks the last read position in DMA
     uint16_t writeIndex = GPS_STACK_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart2_rx);
@@ -289,7 +316,7 @@ void getRMC() {
 
         // Handle the character and try to detect $GNRMC
         if (handleIncomingChar(c)){
-            isRMCExist = 1; // `$GNRMC` sentence is ready
+        	isRMCExist = 1; // `$GNRMC` sentence is ready
         }
 
         lastReadIndex = (lastReadIndex + 1) % GPS_STACK_SIZE;
@@ -298,7 +325,7 @@ void getRMC() {
     // Process `$GNRMC` sentence if detected
     if (isRMCExist){
 		parse_rmc(rmc_str);// Parse the `$GNRMC` sentence
-		display_rmc_data();
+//		display_rmc_data();
 		get_RTC_time_date(&rmc);
 
 //		if (rmc.isValid &&
@@ -314,23 +341,24 @@ void getRMC() {
 			printf("\n\n------------ GPS BUG: Sending latest RMC ------------\n\n");
 			get_RTC_time_date(&rmc_saved);
 			sendRMCDataToFlash(&rmc_saved);
+			getRMC_time++;
 		} else{
 			printf("\n\n------------ DATA FROM GPS MODULE IS NOT VALID YET ------------\n\n");
+			getRMC_time++;
 		}
-
 
         // Clear RMC data after processing
         memset(rmc_str, 0x00, sizeof(rmc_str));
         isRMCExist = 0;
     }
 
-    // GPS timeout logic
-    if (getRMC_time >= 150 && getRMC_time % 150 == 0) {
+    //GPS timeout logic
+    if (getRMC_time >= 400 && getRMC_time % 400 == 0) {
         printf("\n\n-------------------  COLD START GPS module -----------------------\n\n");
         coldStart();
     }
 
-    if (getRMC_time >= 500) {
+    if (getRMC_time >= 1200) {
         GPS_DISABLE();
         osDelay(500);
         GPS_ENABLE();
@@ -353,24 +381,21 @@ void StartGPS(void const * argument)
 	memset(gpsSentence, 0x00, GPS_STACK_SIZE);
 	while(1)
 	{
-
-
+		if (osMutexWait(myMutexHandle, osWaitForever) == osOK){
 			printf("\n\n----------------------- Inside GPS ------------------------\n\n");
-			uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
-			printf("Thread GPS %p is running low on stack: %04ld bytes remaining\n", GPSHandle, freeStack2);
+	//		uint32_t freeStack2 = osThreadGetStackSpace(GPSHandle);
+	//		printf("Thread GPS %p is running low on stack: %04ld bytes remaining\n", GPSHandle, freeStack2);
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
 			osDelay(500);
-			if(osMutexAcquire(myMutexHandle, osWaitForever) == osOK){
-	//		printf("Hello World!!!!\n");
-				getRMC();
-				osMutexRelease(myMutexHandle);
-			}
+	//			printf("Hello World!!!!\n");
+			getRMC();
+			osMutexRelease(myMutexHandle);
 	//		printf("\n------------------------------ GPS SENTENCE ------------------------------\n");
 	//		printf((char*) gpsSentence);
 
 			HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET);
-
 			osDelay(500);
+		}
 	}
 
   /* USER CODE END StartGPS */

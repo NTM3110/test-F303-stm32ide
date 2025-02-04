@@ -24,6 +24,8 @@
 /* USER CODE BEGIN Includes */
 #include "system_management.h"
 #include "spi_flash.h"
+#include "GPS.h"
+#include "RS232-UART1.h"
 #include <stdio.h>
 
 /* USER CODE END Includes */
@@ -48,6 +50,8 @@ ADC_HandleTypeDef hadc3;
 DMA_HandleTypeDef hdma_adc2;
 DMA_HandleTypeDef hdma_adc3;
 
+I2C_HandleTypeDef hi2c1;
+
 RTC_HandleTypeDef hrtc;
 
 SPI_HandleTypeDef hspi1;
@@ -63,77 +67,18 @@ DMA_HandleTypeDef hdma_usart1_tx;
 DMA_HandleTypeDef hdma_usart2_rx;
 DMA_HandleTypeDef hdma_usart3_rx;
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
-/* Definitions for ControllingLED */
-osThreadId_t ControllingLEDHandle;
-const osThreadAttr_t ControllingLED_attributes = {
-  .name = "ControllingLED",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for UART1 */
-osThreadId_t UART1Handle;
-const osThreadAttr_t UART1_attributes = {
-  .name = "UART1",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for SpiFlash */
-osThreadId_t SpiFlashHandle;
-const osThreadAttr_t SpiFlash_attributes = {
-  .name = "SpiFlash",
-  .stack_size = 1280 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for GPS */
-osThreadId_t GPSHandle;
-const osThreadAttr_t GPS_attributes = {
-  .name = "GPS",
-  .stack_size = 480 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for RFID */
-osThreadId_t RFIDHandle;
-const osThreadAttr_t RFID_attributes = {
-  .name = "RFID",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for GSM */
-osThreadId_t GSMHandle;
-const osThreadAttr_t GSM_attributes = {
-  .name = "GSM",
-  .stack_size = 896 * 4,
-  .priority = (osPriority_t) osPriorityLow,
-};
-/* Definitions for RMC_MailQFLASHId */
-osMessageQueueId_t RMC_MailQFLASHIdHandle;
-const osMessageQueueAttr_t RMC_MailQFLASHId_attributes = {
-  .name = "RMC_MailQFLASHId"
-};
-/* Definitions for RMC_MailQGSMId */
-osMessageQueueId_t RMC_MailQGSMIdHandle;
-const osMessageQueueAttr_t RMC_MailQGSMId_attributes = {
-  .name = "RMC_MailQGSMId"
-};
-/* Definitions for tax_MailQId */
-osMessageQueueId_t tax_MailQIdHandle;
-const osMessageQueueAttr_t tax_MailQId_attributes = {
-  .name = "tax_MailQId"
-};
-/* Definitions for myMutex */
-osMutexId_t myMutexHandle;
-const osMutexAttr_t myMutex_attributes = {
-  .name = "myMutex"
-};
+osThreadId defaultTaskHandle;
+osThreadId ControllingLEDHandle;
+osThreadId UART1Handle;
+osThreadId SpiFlashHandle;
+osThreadId GPSHandle;
+osThreadId RFIDHandle;
+osThreadId GSMHandle;
+osMutexId myMutexHandle;
 /* USER CODE BEGIN PV */
-
+osMailQId tax_MailQId;
+osMailQId RMC_MailQFLASHId;
+osMailQId RMC_MailQGSMId;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -149,13 +94,14 @@ static void MX_TIM3_Init(void);
 static void MX_ADC2_Init(void);
 static void MX_ADC3_Init(void);
 static void MX_SPI2_Init(void);
-void StartDefaultTask(void *argument);
-void StartControllingLED(void *argument);
-void StartUART1(void *argument);
-void StartSpiFlash(void *argument);
-void StartGPS(void *argument);
-void StartRFID(void *argument);
-void StartGSM(void *argument);
+static void MX_I2C1_Init(void);
+void StartDefaultTask(void const * argument);
+void StartControllingLED(void const * argument);
+void StartUART1(void const * argument);
+void StartSpiFlash(void const * argument);
+void StartGPS(void const * argument);
+void StartRFID(void const * argument);
+void StartGSM(void const * argument);
 
 /* USER CODE BEGIN PFP */
 // Function to check if a line matches the specified format
@@ -251,22 +197,15 @@ int main(void)
   MX_ADC2_Init();
   MX_ADC3_Init();
   MX_SPI2_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
 
-  /* Init scheduler */
-  osKernelInitialize();
   /* Create the mutex(es) */
-  /* creation of myMutex */
-  myMutexHandle = osMutexNew(&myMutex_attributes);
-
-  if (myMutexHandle == NULL) {
-      printf("Mutex creation failed!\n");
-      while (1);  // If mutex creation fails, halt here
-  } else {
-      printf("Mutex created successfully!\n");
-  }
+  /* definition and creation of myMutex */
+  osMutexDef(myMutex);
+  myMutexHandle = osMutexCreate(osMutex(myMutex));
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -281,49 +220,51 @@ int main(void)
   /* start timers, add new ones, ... */
   /* USER CODE END RTOS_TIMERS */
 
-  /* Create the queue(s) */
-  /* creation of RMC_MailQFLASHId */
-  RMC_MailQFLASHIdHandle = osMessageQueueNew (3, 88, &RMC_MailQFLASHId_attributes);
-
-  /* creation of RMC_MailQGSMId */
-  RMC_MailQGSMIdHandle = osMessageQueueNew (32, 96, &RMC_MailQGSMId_attributes);
-
-  /* creation of tax_MailQId */
-  tax_MailQIdHandle = osMessageQueueNew (1, 128, &tax_MailQId_attributes);
-
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+
+  osMailQDef(GSM_MailQ, 32, GSM_MAIL_STRUCT);
+  RMC_MailQGSMId = osMailCreate(osMailQ(GSM_MailQ), NULL);
+
+  osMailQDef(FLASH_MailQ, 5, RMCSTRUCT);
+  RMC_MailQFLASHId = osMailCreate(osMailQ(FLASH_MailQ), NULL);
+
+  osMailQDef(Tax_MailQ, 1, TAX_MAIL_STRUCT);
+  tax_MailQId = osMailCreate(osMailQ(Tax_MailQ), NULL);
   /* USER CODE END RTOS_QUEUES */
 
-  /* Create the thread(s) */
-  /* creation of defaultTask */
-//  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+//  /* Create the thread(s) */
+//  /* definition and creation of defaultTask */
+//  osThreadDef(defaultTask, StartDefaultTask, osPriorityNormal, 0, 64);
+//  defaultTaskHandle = osThreadCreate(osThread(defaultTask), NULL);
 //
-//  /* creation of ControllingLED */
-//  ControllingLEDHandle = osThreadNew(StartControllingLED, NULL, &ControllingLED_attributes);
+//  /* definition and creation of ControllingLED */
+//  osThreadDef(ControllingLED, StartControllingLED, osPriorityLow, 0, 64);
+//  ControllingLEDHandle = osThreadCreate(osThread(ControllingLED), NULL);
 //
-//  /* creation of UART1 */
-//  UART1Handle = osThreadNew(StartUART1, NULL, &UART1_attributes);
+//  /* definition and creation of UART1 */
+//  osThreadDef(UART1, StartUART1, osPriorityLow, 0, 64);
+//  UART1Handle = osThreadCreate(osThread(UART1), NULL);
 
-  /* creation of SpiFlash */
-  SpiFlashHandle = osThreadNew(StartSpiFlash, NULL, &SpiFlash_attributes);
+  /* definition and creation of SpiFlash */
+  osThreadDef(SpiFlash, StartSpiFlash, osPriorityLow, 0, 1280);
+  SpiFlashHandle = osThreadCreate(osThread(SpiFlash), NULL);
 
-  /* creation of GPS */
-  GPSHandle = osThreadNew(StartGPS, NULL, &GPS_attributes);
+  /* definition and creation of GPS */
+  osThreadDef(GPS, StartGPS, osPriorityLow, 0, 480);
+  GPSHandle = osThreadCreate(osThread(GPS), NULL);
 
-  /* creation of RFID */
-//  RFIDHandle = osThreadNew(StartRFID, NULL, &RFID_attributes);
+//  /* definition and creation of RFID */
+//  osThreadDef(RFID, StartRFID, osPriorityLow, 0, 64);
+//  RFIDHandle = osThreadCreate(osThread(RFID), NULL);
 
-  /* creation of GSM */
-//  GSMHandle = osThreadNew(StartGSM, NULL, &GSM_attributes);
+  /* definition and creation of GSM */
+  osThreadDef(GSM, StartGSM, osPriorityLow, 0, 896);
+  GSMHandle = osThreadCreate(osThread(GSM), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
 //  /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
-  /* USER CODE BEGIN RTOS_EVENTS */
-//  /* add events, ... */
-  /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
   osKernelStart();
@@ -385,13 +326,15 @@ void SystemClock_Config(void)
     Error_Handler();
   }
   PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_USART2
-                              |RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_RTC
-                              |RCC_PERIPHCLK_ADC12|RCC_PERIPHCLK_ADC34;
+                              |RCC_PERIPHCLK_USART3|RCC_PERIPHCLK_I2C1
+                              |RCC_PERIPHCLK_RTC|RCC_PERIPHCLK_ADC12
+                              |RCC_PERIPHCLK_ADC34;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.Usart2ClockSelection = RCC_USART2CLKSOURCE_PCLK1;
   PeriphClkInit.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
   PeriphClkInit.Adc12ClockSelection = RCC_ADC12PLLCLK_DIV1;
   PeriphClkInit.Adc34ClockSelection = RCC_ADC34PLLCLK_DIV1;
+  PeriphClkInit.I2c1ClockSelection = RCC_I2C1CLKSOURCE_HSI;
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
   {
@@ -523,6 +466,54 @@ static void MX_ADC3_Init(void)
 }
 
 /**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.Timing = 0x00201D2B;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c1, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c1, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
   * @brief RTC Initialization Function
   * @param None
   * @retval None
@@ -561,24 +552,6 @@ static void MX_RTC_Init(void)
 
   /** Initialize RTC and set the Time and Date
   */
-  sTime.Hours = 0;
-  sTime.Minutes = 0;
-  sTime.Seconds = 0;
-  sTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
-  sTime.StoreOperation = RTC_STOREOPERATION_RESET;
-  if (HAL_RTC_SetTime(&hrtc, &sTime, RTC_FORMAT_BIN) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sDate.WeekDay = RTC_WEEKDAY_MONDAY;
-  sDate.Month = RTC_MONTH_JANUARY;
-  sDate.Date = 1;
-  sDate.Year = 0;
-
-  if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BIN) != HAL_OK)
-  {
-    Error_Handler();
-  }
   /* USER CODE BEGIN RTC_Init 2 */
 
   /* USER CODE END RTC_Init 2 */
@@ -978,7 +951,7 @@ void process_uart_character(uint8_t ch) {
   * @retval None
   */
 /* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+void StartDefaultTask(void const * argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
@@ -988,7 +961,6 @@ void StartDefaultTask(void *argument)
   }
   /* USER CODE END 5 */
 }
-
 
 /**
   * @brief  Period elapsed callback in non blocking mode
